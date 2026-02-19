@@ -44,14 +44,16 @@ function assignImpostors() {
   return shuffled.slice(0, 2).map(p => p.name);
 }
 
-function checkGameOver() {
-  const active       = gameState.roster.filter(p => !gameState.eliminated.includes(p.name));
-  const impostorsLeft = gameState.impostors.filter(i => !gameState.eliminated.includes(i));
+function checkGameOver(eliminated) {
+  const active        = gameState.roster.filter(p => !eliminated.includes(p.name));
+  const impostorsLeft = gameState.impostors.filter(i => !eliminated.includes(i));
   const innocentsLeft = active.filter(p => !gameState.impostors.includes(p.name));
 
+  // All impostors found → innocents win
   if (impostorsLeft.length === 0) return "innocents";
-  // Game ends if impostors >= innocents OR only 10 or fewer total remain (with at least 1 impostor)
+  // Impostors equal or outnumber innocents → impostors win
   if (impostorsLeft.length >= innocentsLeft.length) return "impostors";
+  // 10 or fewer total remain and impostors still alive → impostors win
   if (active.length <= 10 && impostorsLeft.length > 0) return "impostors";
   return null;
 }
@@ -112,12 +114,11 @@ wss.on("connection", ws => {
       if (msg.type === "kick") {
         const { target } = msg;
         const eliminated = [...gameState.eliminated, target];
-        gameState = { ...gameState, eliminated };
-        const gameOver = checkGameOver();
+        const gameOver = checkGameOver(eliminated);
         if (gameOver) {
-          gameState = { ...gameState, phase: "gameover", gameOver };
+          gameState = { ...gameState, eliminated, phase: "gameover", gameOver };
         } else {
-          gameState = { ...gameState, phase: "discuss", round: gameState.round + 1, votes: {} };
+          gameState = { ...gameState, eliminated, phase: "discuss", round: gameState.round + 1, votes: {} };
         }
         broadcast(gameState);
       }

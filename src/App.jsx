@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 const SIGNIN_URL     = "https://learn.reboot01.com/api/auth/signin";
 const ADMIN_USERNAME = "haaljafen";
-const TEST_USERS     = ["sbucheer", "mkhattar", "yalsari"];
+const TEST_USERS     = ["sbucheer", "mkhattar"];
 
 function parseJWT(token) {
   try {
@@ -201,11 +201,11 @@ const css = `
   .admin-controls .btn{width:auto;padding:10px 20px;font-size:0.85rem}
   .waiting-msg{color:var(--muted);font-size:0.85rem;letter-spacing:2px;text-align:center;margin-top:16px;padding:12px;border:1px dashed var(--border);border-radius:8px}
   .section-label{font-size:0.75rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;font-weight:700}
-  .timer-wrap{margin-bottom:16px;text-align:center}
-  .timer-num{font-family:'Share Tech Mono',monospace;font-size:2.2rem;color:var(--red);text-shadow:0 0 15px var(--glow)}
-  .timer-bar{background:var(--border);border-radius:999px;height:6px;overflow:hidden;margin:8px 0}
-  .timer-fill{height:100%;background:var(--red);border-radius:999px;transition:width 1s linear;box-shadow:0 0 8px var(--glow)}
-  .timer-label{font-size:0.75rem;letter-spacing:3px;color:var(--muted)}
+  .timer-wrap{margin-bottom:20px;text-align:center;padding:16px;background:#0d0d1a;border-radius:10px;border:1px solid var(--border)}
+  .timer-num{font-family:'Share Tech Mono',monospace;font-size:3rem;color:var(--red);text-shadow:0 0 20px var(--glow);line-height:1}
+  .timer-bar{background:var(--border);border-radius:999px;height:8px;overflow:hidden;margin:10px 0 6px}
+  .timer-fill{height:100%;background:var(--red);border-radius:999px;transition:width 1s linear;box-shadow:0 0 10px var(--glow)}
+  .timer-label{font-size:0.72rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase}
   @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
 `;
@@ -495,10 +495,11 @@ function UserApp({ username, onLogout }) {
       <div className="screen"><div className="card">
         <Header title="Discussion" sub={`Round ${gs.round} · Talk it out in real life`}
           round={gs.round} phase="discuss" connected={connected} onLogout={onLogout} />
-        <div style={{padding:20,background:"#0d0d1a",borderRadius:8,border:"1px solid var(--border)",textAlign:"center",marginBottom:20}}>
-          <div style={{fontSize:"2rem",marginBottom:8}}>🗣️</div>
-          <div style={{fontSize:"1.1rem",fontWeight:700,letterSpacing:1}}>Discuss with your group!</div>
-          <div style={{color:"var(--muted)",marginTop:6,fontSize:"0.9rem"}}>Who do you think the impostor is? Share your suspicions aloud.</div>
+        <Timer seconds={60} label="DISCUSSION TIME" onDone={() => send({ type:"startvote" })} />
+        <div style={{padding:16,background:"#0d0d1a",borderRadius:8,border:"1px solid var(--border)",textAlign:"center",marginBottom:16}}>
+          <div style={{fontSize:"1.8rem",marginBottom:6}}>🗣️</div>
+          <div style={{fontSize:"1rem",fontWeight:700,letterSpacing:1}}>Discuss with your group!</div>
+          <div style={{color:"var(--muted)",marginTop:4,fontSize:"0.88rem"}}>Who do you think the impostor is? Share your suspicions aloud.</div>
         </div>
         <div className="section-label">The Suspects</div>
         <div className="player-grid">
@@ -509,8 +510,6 @@ function UserApp({ username, onLogout }) {
             </div>
           ))}
         </div>
-        <Timer seconds={60} label="DISCUSSION TIME" onDone={() => {}} />
-        <div className="waiting-msg">⏳ Waiting for admin to start voting...</div>
       </div></div>
     </div>
   );
@@ -522,7 +521,7 @@ function UserApp({ username, onLogout }) {
       <div className="screen"><div className="card">
         <Header title="Vote" sub="Who is the impostor?"
           round={gs.round} phase="vote" connected={connected} onLogout={onLogout} />
-        <Timer seconds={60} label="VOTING TIME" onDone={() => {}} />
+        <Timer seconds={60} label="VOTING TIME" onDone={() => setVoted(true)} />
         <div className="vote-grid">
           {activeRoster.map(p => (
             <div key={p.name}
