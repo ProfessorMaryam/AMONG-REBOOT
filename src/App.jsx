@@ -49,6 +49,23 @@ const DEFAULT_GS = {
   round: 0, eliminated: [], votes: {}, gameOver: null,
 };
 
+const PROGRESS_KEY = "among-us:progress";
+
+// Shape saved to localStorage and accessible by any consumer:
+// { round, history: [{ round, topVoted, wasImpostor }], bothImpostorsFound }
+function computeProgress(gs) {
+  const history = gs.eliminated.map((name, i) => ({
+    round: i + 1,
+    topVoted: name,
+    wasImpostor: gs.impostors.includes(name),
+  }));
+  return {
+    round: gs.round,
+    history,
+    bothImpostorsFound: gs.impostors.length > 0 && gs.impostors.every(i => gs.eliminated.includes(i)),
+  };
+}
+
 function useGameServer(username, isAdmin) {
   const [gs, setGs]           = useState({ ...DEFAULT_GS });
   const [connected, setConn]  = useState(false);
@@ -57,9 +74,16 @@ function useGameServer(username, isAdmin) {
 
   useEffect(() => { nameRef.current = username; }, [username]);
 
+  // Persist progress summary to localStorage whenever game state changes
+  useEffect(() => {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(computeProgress(gs)));
+  }, [gs]);
+
   useEffect(() => {
     let timer = null;
+    let closed = false;
     function connect() {
+      if (closed) return;
       try {
         const ws = new WebSocket(WS_URL);
         wsRef.current = ws;
@@ -79,13 +103,14 @@ function useGameServer(username, isAdmin) {
         ws.onclose = () => {
           setConn(false);
           wsRef.current = null;
-          timer = setTimeout(connect, 2000);
+          if (!closed) timer = setTimeout(connect, 2000);
         };
         ws.onerror = () => ws.close();
       } catch {}
     }
     connect();
     return () => {
+      closed = true;
       clearTimeout(timer);
       if (wsRef.current) {
         // notify server on leave
@@ -103,7 +128,7 @@ function useGameServer(username, isAdmin) {
     }
   }
 
-  return { gs, connected, send };
+  return { gs, connected, send, gameProgress: computeProgress(gs) };
 }
 
 // ── STORY PAGES ───────────────────────────────────────────────────────────────
@@ -245,7 +270,7 @@ function LoginScreen({ onLogin }) {
       let token = (await res.text()).replace(/^"|"$/g, "");
       const payload = parseJWT(token);
       const username = payload?.login || payload?.name || payload?.sub || name;
-      sessionStorage.setItem("jwt", token);
+      localStorage.setItem("among-us:jwt", token);
       onLogin(username, false);
     } catch { setErr("Network error — check your connection."); }
     finally { setLoad(false); }
@@ -341,6 +366,12 @@ function AdminDashboard({ onLogout }) {
             {gs.phase === "gameover" && (
               <button className="btn ghost" onClick={() => send({ type:"reset" })}>
                 🔄 Reset Game
+              </button>
+            )}
+            {gs.phase !== "lobby" && gs.phase !== "gameover" && (
+              <button className="btn" style={{background:"#3a0a0a",border:"1px solid var(--red)",color:"var(--red)"}}
+                onClick={() => { if (window.confirm("End the current game and return everyone to the lobby?")) send({ type:"reset" }); }}>
+                ✖ End Game
               </button>
             )}
           </div>
@@ -611,19 +642,29 @@ function UserApp({ username, onLogout }) {
 // ── ROOT ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const [user, setUser] = useState(() => {
+    // JWT-based persistence for real users
+    const jwt = localStorage.getItem("among-us:jwt");
+    if (jwt) {
+      const payload = parseJWT(jwt);
+      const username = payload?.login || payload?.name || payload?.sub;
+      if (username) return { username, isAdmin: false };
+    }
+    // Fallback for admin / test users (no JWT)
     try { return JSON.parse(localStorage.getItem("among-us:user")) || null; }
     catch { return null; }
   });
 
   function handleLogin(username, isAdmin) {
-    const u = { username, isAdmin };
-    localStorage.setItem("among-us:user", JSON.stringify(u));
-    setUser(u);
+    // Admin and test users have no JWT — persist their session separately
+    if (isAdmin || TEST_USERS.includes(username)) {
+      localStorage.setItem("among-us:user", JSON.stringify({ username, isAdmin }));
+    }
+    setUser({ username, isAdmin });
   }
 
   function handleLogout() {
+    localStorage.removeItem("among-us:jwt");
     localStorage.removeItem("among-us:user");
-    sessionStorage.removeItem("jwt");
     setUser(null);
   }
 

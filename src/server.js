@@ -53,8 +53,6 @@ function checkGameOver(eliminated) {
   if (impostorsLeft.length === 0) return "innocents";
   // Impostors equal or outnumber innocents → impostors win
   if (impostorsLeft.length >= innocentsLeft.length) return "impostors";
-  // 10 or fewer total remain and impostors still alive → impostors win
-  if (active.length <= 10 && impostorsLeft.length > 0) return "impostors";
   return null;
 }
 
