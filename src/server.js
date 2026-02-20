@@ -1,138 +1,152 @@
 // Among Us Game Server
-// Place in src/ folder and run: node src/server.js
+// Run with: npm run server (or npm run dev to run both client and server)
 
 import { WebSocketServer } from "ws";
+import { freshState } from "./server/gameState.js";
+import {
+  handleJoin,
+  handleLeave,
+  handleUpdate,
+  handleStartGame,
+  handleVote,
+  handleShowResult,
+  handleKick,
+  handleReset,
+} from "./server/messageHandlers.js";
+// Note: handleStartVote is no longer used — server manages vote phase via startVote()
 
 const PORT = 4000;
-
-const RTC_ROSTER = [
-  { name: "Hajar"    },
-  { name: "Sara"     },
-  { name: "Mariam"   },
-  { name: "Mohammad" },
-  { name: "Nooh"     },
-  { name: "Yousif"   },
-];
-
-function freshState() {
-  return {
-    // logged-in players (viewers/voters)
-    lobby: [],
-    // the fixed RTC roster for voting
-    roster: RTC_ROSTER.map(p => ({ ...p })),
-    impostors: [],
-    phase: "lobby",   // lobby | discuss | vote | result | gameover
-    round: 0,
-    eliminated: [],
-    votes: {},
-    gameOver: null,   // null | "innocents" | "impostors"
-  };
-}
 
 let gameState = freshState();
 const wss = new WebSocketServer({ port: PORT });
 const clients = new Set();
 
+// Server-side phase auto-advance timer
+let phaseTimer = null;
+
+function clearPhaseTimer() {
+  if (phaseTimer) { clearTimeout(phaseTimer); phaseTimer = null; }
+}
+
+/**
+ * Broadcast game state to all connected clients
+ */
 function broadcast(state) {
   const msg = JSON.stringify({ type: "state", state });
-  clients.forEach(c => { if (c.readyState === 1) c.send(msg); });
+  clients.forEach((c) => { if (c.readyState === 1) c.send(msg); });
 }
 
-function assignImpostors() {
-  const active = gameState.roster.filter(p => !gameState.eliminated.includes(p.name));
-  const shuffled = [...active].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 2).map(p => p.name);
+/**
+ * Transition to discuss phase and schedule auto-vote after 60s
+ */
+function startDiscuss(extraPatch = {}) {
+  clearPhaseTimer();
+  const now = Date.now();
+  gameState = { ...gameState, ...extraPatch, phase: "discuss", phaseStartedAt: now };
+  broadcast(gameState);
+  phaseTimer = setTimeout(() => {
+    if (gameState.phase === "discuss") startVote();
+  }, 60_000);
 }
 
-function checkGameOver() {
-  const active       = gameState.roster.filter(p => !gameState.eliminated.includes(p.name));
-  const impostorsLeft = gameState.impostors.filter(i => !gameState.eliminated.includes(i));
-  const innocentsLeft = active.filter(p => !gameState.impostors.includes(p.name));
-
-  if (impostorsLeft.length === 0) return "innocents";
-  // Game ends if impostors >= innocents OR only 10 or fewer total remain (with at least 1 impostor)
-  if (impostorsLeft.length >= innocentsLeft.length) return "impostors";
-  if (active.length <= 10 && impostorsLeft.length > 0) return "impostors";
-  return null;
+/**
+ * Transition to vote phase and schedule auto-result after 30s
+ */
+function startVote() {
+  clearPhaseTimer();
+  gameState = { ...gameState, phase: "vote", votes: {}, phaseStartedAt: Date.now() };
+  broadcast(gameState);
+  phaseTimer = setTimeout(() => {
+    if (gameState.phase === "vote") {
+      clearPhaseTimer();
+      gameState = { ...gameState, phase: "result", phaseStartedAt: Date.now() };
+      broadcast(gameState);
+    }
+  }, 30_000);
 }
 
-wss.on("connection", ws => {
+wss.on("connection", (ws) => {
   clients.add(ws);
   ws.send(JSON.stringify({ type: "state", state: gameState }));
   console.log(`✅ Client connected — total: ${clients.size}`);
 
-  ws.on("message", raw => {
+  ws.on("message", (raw) => {
     try {
       const msg = JSON.parse(raw.toString());
 
-      if (msg.type === "join") {
-        // A viewer logs in and joins the lobby list
-        const { username } = msg;
-        if (!gameState.lobby.find(p => p.name === username)) {
-          gameState = { ...gameState, lobby: [...gameState.lobby, { name: username }] };
-          broadcast(gameState);
-        } else {
-          ws.send(JSON.stringify({ type: "state", state: gameState }));
-        }
-      }
+      switch (msg.type) {
+        case "join":
+          gameState = handleJoin(gameState, msg, ws, broadcast);
+          break;
 
-      if (msg.type === "leave") {
-        const { username } = msg;
-        gameState = { ...gameState, lobby: gameState.lobby.filter(p => p.name !== username) };
-        broadcast(gameState);
-      }
+        case "leave":
+          gameState = handleLeave(gameState, msg, broadcast);
+          break;
 
-      if (msg.type === "update") {
-        gameState = { ...gameState, ...msg.patch };
-        broadcast(gameState);
-      }
+        case "update":
+          // Used for story→discuss and puzzle→discuss
+          if (msg.patch.phase === "discuss") {
+            startDiscuss(msg.patch);
+          } else {
+            gameState = handleUpdate(gameState, msg, broadcast);
+          }
+          break;
 
-      if (msg.type === "startgame") {
-        const impostors = assignImpostors();
-        gameState = { ...gameState, impostors, phase: "story", round: 1, eliminated: [], votes: {}, gameOver: null };
-        broadcast(gameState);
-      }
+        case "startgame":
+          clearPhaseTimer();
+          gameState = handleStartGame(gameState, broadcast);
+          break;
 
-      if (msg.type === "startvote") {
-        gameState = { ...gameState, phase: "vote", votes: {} };
-        broadcast(gameState);
-      }
+        case "startvote":
+          // Manual admin override
+          startVote();
+          break;
 
-      if (msg.type === "vote") {
-        const { voter, target } = msg;
-        gameState = { ...gameState, votes: { ...gameState.votes, [voter]: target } };
-        broadcast(gameState);
-      }
+        case "vote":
+          // Only record vote if voting phase is still open
+          if (gameState.phase === "vote") {
+            gameState = handleVote(gameState, msg, broadcast);
+          }
+          break;
 
-      if (msg.type === "showresult") {
-        gameState = { ...gameState, phase: "result" };
-        broadcast(gameState);
-      }
+        case "showresult":
+          clearPhaseTimer();
+          gameState = handleShowResult(gameState, broadcast);
+          break;
 
-      if (msg.type === "kick") {
-        const { target } = msg;
-        const eliminated = [...gameState.eliminated, target];
-        gameState = { ...gameState, eliminated };
-        const gameOver = checkGameOver();
-        if (gameOver) {
-          gameState = { ...gameState, phase: "gameover", gameOver };
-        } else {
-          gameState = { ...gameState, phase: "discuss", round: gameState.round + 1, votes: {} };
-        }
-        broadcast(gameState);
-      }
+        case "kick":
+          clearPhaseTimer();
+          gameState = handleKick(gameState, msg, broadcast);
+          // handleKick now sets phase to "puzzle" (not discuss)
+          break;
 
-      if (msg.type === "reset") {
-        gameState = freshState();
-        broadcast(gameState);
-      }
+        case "reset":
+          clearPhaseTimer();
+          gameState = handleReset(gameState, freshState, broadcast);
+          break;
 
-    } catch (e) { console.error("Bad message:", e.message); }
+        // case "chat": {
+        //   const chatOut = JSON.stringify({
+        //     type: "chat",
+        //     username: msg.username,
+        //     text: msg.text,
+        //     time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+        //   });
+        //   clients.forEach(c => { if (c.readyState === 1) c.send(chatOut); });
+        //   break;
+        // }
+
+        default:
+          console.warn(`Unknown message type: ${msg.type}`);
+      }
+    } catch (e) {
+      console.error("Bad message:", e.message);
+    }
   });
 
   ws.on("close", () => {
     clients.delete(ws);
-    console.log(`Client disconnected — total: ${clients.size}`);
+    console.log(`❌ Client disconnected — total: ${clients.size}`);
   });
 });
 
