@@ -10,6 +10,7 @@ import { VoteView } from "./views/VoteView";
 import { ResultView } from "./views/ResultView";
 import { PuzzleView } from "./views/PuzzleView";
 import { GameOverView } from "./views/GameOverView";
+import { WalletView } from "./views/WalletView";
 
 /**
  * User application - handles all player views
@@ -82,6 +83,12 @@ export function UserApp({ username, onLogout }) {
         {gs.phase === "puzzle" && (
           <div className="app">
             <PuzzleView gs={gs} connected={connected} onLogout={onLogout} />
+          </div>
+        )}
+
+        {gs.phase === "wallet" && (
+          <div className="app">
+            <WalletView gs={gs} connected={connected} onLogout={onLogout} />
           </div>
         )}
 

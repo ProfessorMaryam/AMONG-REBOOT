@@ -37,6 +37,21 @@ function broadcast(state) {
 }
 
 /**
+ * Transition to wallet phase (Round 3 pre-discuss mini-game).
+ * 20s pick + 60s view = 80s total, then auto-start discuss.
+ */
+function startWallet(extraPatch = {}) {
+  clearPhaseTimer();
+  const now = Date.now();
+  gameState = { ...gameState, ...extraPatch, phase: "wallet", phaseStartedAt: now };
+  broadcast(gameState);
+  // After 80s the wallet phase ends → start discussion
+  phaseTimer = setTimeout(() => {
+    if (gameState.phase === "wallet") startDiscuss();
+  }, 80_000);
+}
+
+/**
  * Transition to discuss phase and schedule auto-vote after 60s
  */
 function startDiscuss(extraPatch = {}) {
@@ -84,9 +99,11 @@ wss.on("connection", (ws) => {
           break;
 
         case "update":
-          // Used for story→discuss and puzzle→discuss
+          // Used for story→discuss and puzzle→discuss and wallet→discuss
           if (msg.patch.phase === "discuss") {
             startDiscuss(msg.patch);
+          } else if (msg.patch.phase === "wallet") {
+            startWallet(msg.patch);
           } else {
             gameState = handleUpdate(gameState, msg, broadcast);
           }
@@ -117,7 +134,14 @@ wss.on("connection", (ws) => {
         case "kick":
           clearPhaseTimer();
           gameState = handleKick(gameState, msg, broadcast);
-          // handleKick now sets phase to "puzzle" (not discuss)
+          // handleKick sets phase to "puzzle" or "wallet" depending on next round
+          if (gameState.phase === "wallet") {
+            // Start the 80s wallet timer (20s pick + 60s view → then discuss)
+            const walletStart = gameState.phaseStartedAt;
+            phaseTimer = setTimeout(() => {
+              if (gameState.phase === "wallet") startDiscuss();
+            }, 80_000 - (Date.now() - walletStart));
+          }
           break;
 
         case "reset":

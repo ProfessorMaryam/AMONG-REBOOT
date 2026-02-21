@@ -74,6 +74,16 @@ export function AdminDashboard({ onLogout }) {
                 🧩 Continue to Discussion
               </button>
             )}
+            {gs.phase === "wallet" && (
+              <button
+                className="btn yellow"
+                onClick={() =>
+                  send({ type: "update", patch: { phase: "discuss" } })
+                }
+              >
+                👜 Skip Wallet — Go to Discussion
+              </button>
+            )}
             {gs.phase === "vote" && (
               <button
                 className="btn"

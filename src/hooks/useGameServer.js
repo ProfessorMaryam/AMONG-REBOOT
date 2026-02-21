@@ -2,24 +2,25 @@ import { useState, useEffect, useRef } from "react";
 import { WS_URL, DEFAULT_GAME_STATE } from "../utils/gameHelpers";
 
 /**
- * Custom hook for WebSocket connection to game server
- * @param {string} username - Current user's username
- * @param {boolean} isAdmin - Whether user is admin
- * @returns {{gs: Object, connected: boolean, send: Function}} Game state, connection status, and send function
+ * Custom hook for WebSocket connection to game server.
+ * Run the server with: node src/server.js
+ * Then the frontend with: npm run dev
+ *
+ * @param {string} username - Current user's username (null for admin)
+ * @param {boolean} isAdmin - Whether this is the admin tab
+ * @returns {{gs, connected, send, chatLog}}
  */
 export function useGameServer(username, isAdmin) {
-  const [gs, setGs] = useState({ ...DEFAULT_GAME_STATE });
-  const [connected, setConn] = useState(false);
+  const [gs, setGs]           = useState({ ...DEFAULT_GAME_STATE });
+  const [connected, setConn]  = useState(false);
   const [chatLog, setChatLog] = useState([]);
-  const wsRef = useRef(null);
+  const wsRef   = useRef(null);
   const nameRef = useRef(username);
 
-  useEffect(() => {
-    nameRef.current = username;
-  }, [username]);
+  useEffect(() => { nameRef.current = username; }, [username]);
 
   useEffect(() => {
-    let timer = null;
+    let reconnectTimer = null;
 
     function connect() {
       try {
@@ -31,7 +32,8 @@ export function useGameServer(username, isAdmin) {
           if (!isAdmin && nameRef.current) {
             ws.send(JSON.stringify({ type: "join", username: nameRef.current }));
           } else {
-            ws.send(JSON.stringify({ type: "update", patch: {} })); // just get state
+            // Admin: request current state immediately on connect
+            ws.send(JSON.stringify({ type: "update", patch: {} }));
           }
         };
 
@@ -41,27 +43,30 @@ export function useGameServer(username, isAdmin) {
             setGs({ ...msg.state });
             if (msg.state.phase === "lobby") setChatLog([]);
           }
-          if (msg.type === "chat") setChatLog(prev => [...prev, msg]);
+          if (msg.type === "chat") {
+            setChatLog(prev => [...prev, msg]);
+          }
         };
 
         ws.onclose = () => {
           setConn(false);
           wsRef.current = null;
-          timer = setTimeout(connect, 2000);
+          reconnectTimer = setTimeout(connect, 2000);
         };
 
         ws.onerror = () => ws.close();
+
       } catch (err) {
-        console.error("WebSocket connection error:", err);
+        console.error("WebSocket error:", err);
+        reconnectTimer = setTimeout(connect, 2000);
       }
     }
 
     connect();
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(reconnectTimer);
       if (wsRef.current) {
-        // notify server on leave
         if (!isAdmin && nameRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({ type: "leave", username: nameRef.current }));
         }
@@ -78,4 +83,3 @@ export function useGameServer(username, isAdmin) {
 
   return { gs, connected, send, chatLog };
 }
-

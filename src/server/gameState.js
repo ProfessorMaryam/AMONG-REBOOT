@@ -19,7 +19,7 @@ export function freshState() {
     lobby: [],
     // the fixed RTC roster for voting
     roster: RTC_ROSTER.map((p) => ({ ...p })),
-    impostors: ["Hajar", "Sara"],
+    impostors: ["Hajar", "Yousif"],
     phase: "lobby", // lobby | story | discuss | puzzle | vote | result | gameover
     round: 0,
     eliminated: [],
@@ -35,7 +35,7 @@ export function freshState() {
  * @returns {Array<string>} Array of impostor names
  */
 export function assignImpostors(_gameState) {
-  return ["Sara", "Hajar"];
+  return ["Hajar", "Yousif"];
 }
 
 /**

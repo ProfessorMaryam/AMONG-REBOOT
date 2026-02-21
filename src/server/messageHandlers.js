@@ -116,9 +116,11 @@ export function handleKick(gameState, msg, broadcast) {
     };
   } else {
     const nextRound = gameState.round + 1;
+    // Round 3 starts with the Suspect Wallet mini-game instead of a puzzle
+    const nextPhase = nextRound === 3 ? "wallet" : "puzzle";
     gameState = {
       ...gameState,
-      phase: "puzzle",
+      phase: nextPhase,
       round: nextRound,
       votes: {},
       phaseStartedAt: Date.now(),

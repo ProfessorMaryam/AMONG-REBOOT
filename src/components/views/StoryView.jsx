@@ -7,9 +7,9 @@ export function StoryView({ storyPage, setStoryPage, onLogout }) {
   const page = STORY_PAGES[storyPage];
 
   return (
-    <div className="screen">
-      <div className="card">
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+    <div className="screen" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+      <div className="card" style={{ maxWidth: 560, width: "100%", textAlign: "center" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
           <button
             className="btn ghost"
             style={{ width: "auto", padding: "6px 16px", fontSize: "0.78rem", letterSpacing: 1 }}
@@ -27,7 +27,7 @@ export function StoryView({ storyPage, setStoryPage, onLogout }) {
               <div key={i} className={`story-dot ${i === storyPage ? "active" : ""}`} />
             ))}
           </div>
-          <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+          <div style={{ display: "flex", gap: 12, marginTop: 12, justifyContent: "center" }}>
             {storyPage > 0 && (
               <button
                 className="btn ghost"
@@ -55,4 +55,3 @@ export function StoryView({ storyPage, setStoryPage, onLogout }) {
     </div>
   );
 }
-
