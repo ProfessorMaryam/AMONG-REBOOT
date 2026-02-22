@@ -1,5 +1,5 @@
 // Among Us Game Server
-// Run with: npm run server (or npm run dev to run both client and server)
+// Run with: node src/server.js (or npm run server)
 
 import { WebSocketServer } from "ws";
 import { freshState } from "./server/gameState.js";
@@ -13,27 +13,55 @@ import {
   handleKick,
   handleReset,
 } from "./server/messageHandlers.js";
-// Note: handleStartVote is no longer used — server manages vote phase via startVote()
 
 const PORT = 4000;
+const ADMIN_USERNAME = "haaljafen";
 
 let gameState = freshState();
 const wss = new WebSocketServer({ port: PORT });
 const clients = new Set();
 
+// Track which WebSocket connections belong to the admin
+const adminSockets = new Set();
+
 // Server-side phase auto-advance timer
 let phaseTimer = null;
 
 function clearPhaseTimer() {
-  if (phaseTimer) { clearTimeout(phaseTimer); phaseTimer = null; }
+  if (phaseTimer) {
+    clearTimeout(phaseTimer);
+    phaseTimer = null;
+  }
 }
 
 /**
- * Broadcast game state to all connected clients
+ * Strip impostors from state before sending to non-admin clients.
+ * Players must never see who the impostors are.
+ */
+function stateForClient(state, isAdmin) {
+  if (isAdmin) return state;
+  const { impostors: _hidden, ...safe } = state;
+  return { ...safe, impostors: [] };
+}
+
+/**
+ * Broadcast game state to all connected clients.
+ * Admins get the full state; players get state with impostors hidden.
  */
 function broadcast(state) {
-  const msg = JSON.stringify({ type: "state", state });
-  clients.forEach((c) => { if (c.readyState === 1) c.send(msg); });
+  const adminMsg = JSON.stringify({
+    type: "state",
+    state: stateForClient(state, true),
+  });
+  const playerMsg = JSON.stringify({
+    type: "state",
+    state: stateForClient(state, false),
+  });
+  clients.forEach((c) => {
+    if (c.readyState === 1) {
+      c.send(adminSockets.has(c) ? adminMsg : playerMsg);
+    }
+  });
 }
 
 /**
@@ -43,9 +71,13 @@ function broadcast(state) {
 function startWallet(extraPatch = {}) {
   clearPhaseTimer();
   const now = Date.now();
-  gameState = { ...gameState, ...extraPatch, phase: "wallet", phaseStartedAt: now };
+  gameState = {
+    ...gameState,
+    ...extraPatch,
+    phase: "wallet",
+    phaseStartedAt: now,
+  };
   broadcast(gameState);
-  // After 80s the wallet phase ends → start discussion
   phaseTimer = setTimeout(() => {
     if (gameState.phase === "wallet") startDiscuss();
   }, 80_000);
@@ -57,7 +89,12 @@ function startWallet(extraPatch = {}) {
 function startDiscuss(extraPatch = {}) {
   clearPhaseTimer();
   const now = Date.now();
-  gameState = { ...gameState, ...extraPatch, phase: "discuss", phaseStartedAt: now };
+  gameState = {
+    ...gameState,
+    ...extraPatch,
+    phase: "discuss",
+    phaseStartedAt: now,
+  };
   broadcast(gameState);
   phaseTimer = setTimeout(() => {
     if (gameState.phase === "discuss") startVote();
@@ -69,7 +106,12 @@ function startDiscuss(extraPatch = {}) {
  */
 function startVote() {
   clearPhaseTimer();
-  gameState = { ...gameState, phase: "vote", votes: {}, phaseStartedAt: Date.now() };
+  gameState = {
+    ...gameState,
+    phase: "vote",
+    votes: {},
+    phaseStartedAt: Date.now(),
+  };
   broadcast(gameState);
   phaseTimer = setTimeout(() => {
     if (gameState.phase === "vote") {
@@ -82,83 +124,143 @@ function startVote() {
 
 wss.on("connection", (ws) => {
   clients.add(ws);
-  ws.send(JSON.stringify({ type: "state", state: gameState }));
+  // New connections are never admin until they authenticate via join
+  ws.send(
+    JSON.stringify({ type: "state", state: stateForClient(gameState, false) }),
+  );
   console.log(`✅ Client connected — total: ${clients.size}`);
 
   ws.on("message", (raw) => {
     try {
       const msg = JSON.parse(raw.toString());
+      const isAdminSocket = adminSockets.has(ws);
 
       switch (msg.type) {
-        case "join":
-          gameState = handleJoin(gameState, msg, ws, broadcast);
-          break;
+        // ── Player messages (anyone logged in) ───────────────────────
 
-        case "leave":
-          gameState = handleLeave(gameState, msg, broadcast);
-          break;
+        case "join": {
+          const username = String(msg.username || "")
+            .trim()
+            .slice(0, 64);
+          if (!username) break;
 
-        case "update":
-          // Used for story→discuss and puzzle→discuss and wallet→discuss
-          if (msg.patch.phase === "discuss") {
+          // Track admin sessions by username — the only way to mark a socket as admin
+          if (username === ADMIN_USERNAME) {
+            adminSockets.add(ws);
+          }
+          gameState = handleJoin(
+            gameState,
+            { ...msg, username },
+            ws,
+            broadcast,
+          );
+          // Re-send personalised state so admin immediately gets full state
+          ws.send(
+            JSON.stringify({
+              type: "state",
+              state: stateForClient(gameState, adminSockets.has(ws)),
+            }),
+          );
+          break;
+        }
+
+        case "leave": {
+          const username = String(msg.username || "")
+            .trim()
+            .slice(0, 64);
+          if (!username) break;
+          adminSockets.delete(ws);
+          gameState = handleLeave(gameState, { ...msg, username }, broadcast);
+          break;
+        }
+
+        case "vote": {
+          // Only accept votes during vote phase, and only one vote per player
+          if (gameState.phase !== "vote") break;
+          const voter = String(msg.voter || "")
+            .trim()
+            .slice(0, 64);
+          const target = String(msg.target || "")
+            .trim()
+            .slice(0, 64);
+          // Voter must be in the lobby and not have already voted
+          const inLobby = gameState.lobby.some((p) => p.name === voter);
+          const alreadyVoted = voter in gameState.votes;
+          // Target must be an active (non-eliminated) roster member
+          const validTarget = gameState.roster.some(
+            (p) => p.name === target && !gameState.eliminated.includes(p.name),
+          );
+          if (!inLobby || alreadyVoted || !validTarget) break;
+          gameState = handleVote(gameState, { voter, target }, broadcast);
+          break;
+        }
+
+        // ── Admin-only messages ───────────────────────────────────────
+
+        case "update": {
+          if (!isAdminSocket) break;
+          // Whitelist of allowed phase transitions only — no arbitrary patch
+          const allowedPhases = ["discuss", "wallet", "story", "puzzle"];
+          const targetPhase = msg.patch?.phase;
+          if (targetPhase && !allowedPhases.includes(targetPhase)) break;
+          if (targetPhase === "discuss") {
             startDiscuss(msg.patch);
-          } else if (msg.patch.phase === "wallet") {
+          } else if (targetPhase === "wallet") {
             startWallet(msg.patch);
           } else {
             gameState = handleUpdate(gameState, msg, broadcast);
           }
           break;
+        }
 
-        case "startgame":
+        case "startgame": {
+          if (!isAdminSocket) break;
           clearPhaseTimer();
           gameState = handleStartGame(gameState, broadcast);
           break;
+        }
 
-        case "startvote":
-          // Manual admin override
+        case "startvote": {
+          if (!isAdminSocket) break;
           startVote();
           break;
+        }
 
-        case "vote":
-          // Only record vote if voting phase is still open
-          if (gameState.phase === "vote") {
-            gameState = handleVote(gameState, msg, broadcast);
-          }
-          break;
-
-        case "showresult":
+        case "showresult": {
+          if (!isAdminSocket) break;
           clearPhaseTimer();
           gameState = handleShowResult(gameState, broadcast);
           break;
+        }
 
-        case "kick":
+        case "kick": {
+          if (!isAdminSocket) break;
+          // Target must be an active roster member
+          const target = String(msg.target || "").trim();
+          const validTarget = gameState.roster.some(
+            (p) => p.name === target && !gameState.eliminated.includes(p.name),
+          );
+          if (!validTarget) break;
           clearPhaseTimer();
-          gameState = handleKick(gameState, msg, broadcast);
-          // handleKick sets phase to "puzzle" or "wallet" depending on next round
+          gameState = handleKick(gameState, { target }, broadcast);
           if (gameState.phase === "wallet") {
-            // Start the 80s wallet timer (20s pick + 60s view → then discuss)
             const walletStart = gameState.phaseStartedAt;
-            phaseTimer = setTimeout(() => {
-              if (gameState.phase === "wallet") startDiscuss();
-            }, 80_000 - (Date.now() - walletStart));
+            phaseTimer = setTimeout(
+              () => {
+                if (gameState.phase === "wallet") startDiscuss();
+              },
+              80_000 - (Date.now() - walletStart),
+            );
           }
           break;
+        }
 
-        case "reset":
+        case "reset": {
+          if (!isAdminSocket) break;
           clearPhaseTimer();
           gameState = handleReset(gameState, freshState, broadcast);
           break;
-
-        // case "chat": {
-        //   const chatOut = JSON.stringify({
-        //     type: "chat",
-        //     username: msg.username,
-        //     text: msg.text,
-        //     time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
-        //   });
-        //   clients.forEach(c => { if (c.readyState === 1) c.send(chatOut); });
-        //   break;
-        // }
+        }
 
         default:
           console.warn(`Unknown message type: ${msg.type}`);
@@ -169,6 +271,7 @@ wss.on("connection", (ws) => {
   });
 
   ws.on("close", () => {
+    adminSockets.delete(ws);
     clients.delete(ws);
     console.log(`❌ Client disconnected — total: ${clients.size}`);
   });

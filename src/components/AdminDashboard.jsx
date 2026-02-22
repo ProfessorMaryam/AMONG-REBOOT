@@ -7,7 +7,7 @@ import { Header } from "./Header";
  * Admin dashboard for game control
  */
 export function AdminDashboard({ onLogout }) {
-  const { gs, connected, send } = useGameServer(null, true);
+  const { gs, connected, send } = useGameServer("haaljafen", true);
   const { counts, top } = tallyVotes(gs.votes);
   const activeRoster = gs.roster
     ? gs.roster.filter((p) => !gs.eliminated.includes(p.name))

@@ -21,7 +21,7 @@ export function StoryView({ storyPage, setStoryPage, onLogout }) {
         <div className="story-page">
           <div className="story-icon">{page.icon}</div>
           <div className="story-title">{page.title}</div>
-          <div className="story-text">{page.text}</div>
+          <div className="story-text" style={{ whiteSpace: "pre-line" }}>{page.text}</div>
           <div className="story-dots">
             {STORY_PAGES.map((_, i) => (
               <div key={i} className={`story-dot ${i === storyPage ? "active" : ""}`} />

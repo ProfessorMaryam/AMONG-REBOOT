@@ -4,15 +4,26 @@ import { assignImpostors, checkGameOver } from "./gameState.js";
 /**
  * Handle join message
  */
+const ADMIN_USERNAME = "haaljafen";
+
 export function handleJoin(gameState, msg, ws, broadcast) {
   const { username } = msg;
+  console.log(`✅ ${username} attempting to join`);
+  // Admin connects for control only — never appears in the player lobby
+  if (username === ADMIN_USERNAME) {
+    ws.send(JSON.stringify({ type: "state", state: gameState }));
+    return gameState;
+  }
   if (!gameState.lobby.find((p) => p.name === username)) {
+    console.log(`  ➕ Adding ${username} to lobby`);
     gameState = {
       ...gameState,
       lobby: [...gameState.lobby, { name: username }],
     };
     broadcast(gameState);
   } else {
+    console.log(`  ↩️  ${username} reconnecting (already in lobby)`);
+    // Just send current state - don't broadcast
     ws.send(JSON.stringify({ type: "state", state: gameState }));
   }
   return gameState;
@@ -116,8 +127,9 @@ export function handleKick(gameState, msg, broadcast) {
     };
   } else {
     const nextRound = gameState.round + 1;
-    // Round 3 starts with the Suspect Wallet mini-game instead of a puzzle
-    const nextPhase = nextRound === 3 ? "wallet" : "puzzle";
+    // After Round 1 → SQL puzzle; After Round 2 → Wallet mini-game; After Round 3+ → SQL puzzle
+    const nextPhase =
+      nextRound === 2 ? "puzzle" : nextRound === 3 ? "wallet" : "puzzle";
     gameState = {
       ...gameState,
       phase: nextPhase,

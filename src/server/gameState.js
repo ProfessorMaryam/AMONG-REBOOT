@@ -20,7 +20,7 @@ export function freshState() {
     // the fixed RTC roster for voting
     roster: RTC_ROSTER.map((p) => ({ ...p })),
     impostors: ["Hajar", "Yousif"],
-    phase: "lobby", // lobby | story | discuss | puzzle | vote | result | gameover
+    phase: "lobby", // lobby | story | discuss | wallet | puzzle | vote | result | gameover
     round: 0,
     eliminated: [],
     votes: {},

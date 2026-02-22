@@ -1,15 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { WS_URL, DEFAULT_GAME_STATE } from "../utils/gameHelpers";
 
-/**
- * Custom hook for WebSocket connection to game server.
- * Run the server with: node src/server.js
- * Then the frontend with: npm run dev
- *
- * @param {string} username - Current user's username (null for admin)
- * @param {boolean} isAdmin - Whether this is the admin tab
- * @returns {{gs, connected, send, chatLog}}
- */
 export function useGameServer(username, isAdmin) {
   const [gs, setGs]           = useState({ ...DEFAULT_GAME_STATE });
   const [connected, setConn]  = useState(false);
@@ -21,23 +12,27 @@ export function useGameServer(username, isAdmin) {
 
   useEffect(() => {
     let reconnectTimer = null;
+    let destroyed = false; // set to true when this effect instance is cleaned up
 
     function connect() {
+      if (destroyed) return;
+
+      // Don't open a second socket if one is already alive
+      if (wsRef.current && wsRef.current.readyState < 2) return;
+
       try {
         const ws = new WebSocket(WS_URL);
         wsRef.current = ws;
 
         ws.onopen = () => {
+          if (destroyed) { ws.close(); return; }
           setConn(true);
-          if (!isAdmin && nameRef.current) {
+          if (nameRef.current) {
             ws.send(JSON.stringify({ type: "join", username: nameRef.current }));
-          } else {
-            // Admin: request current state immediately on connect
-            ws.send(JSON.stringify({ type: "update", patch: {} }));
           }
         };
 
-        ws.onmessage = e => {
+        ws.onmessage = (e) => {
           const msg = JSON.parse(e.data);
           if (msg.type === "state") {
             setGs({ ...msg.state });
@@ -51,26 +46,32 @@ export function useGameServer(username, isAdmin) {
         ws.onclose = () => {
           setConn(false);
           wsRef.current = null;
-          reconnectTimer = setTimeout(connect, 2000);
+          if (!destroyed) {
+            reconnectTimer = setTimeout(connect, 2000);
+          }
         };
 
         ws.onerror = () => ws.close();
-
       } catch (err) {
         console.error("WebSocket error:", err);
-        reconnectTimer = setTimeout(connect, 2000);
+        if (!destroyed) {
+          reconnectTimer = setTimeout(connect, 2000);
+        }
       }
     }
 
     connect();
 
     return () => {
+      destroyed = true;
       clearTimeout(reconnectTimer);
-      if (wsRef.current) {
-        if (!isAdmin && nameRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ type: "leave", username: nameRef.current }));
+      const ws = wsRef.current;
+      if (ws) {
+        if (!isAdmin && nameRef.current && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "leave", username: nameRef.current }));
         }
-        wsRef.current.close();
+        ws.close();
+        wsRef.current = null;
       }
     };
   }, [isAdmin]);

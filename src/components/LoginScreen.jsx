@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { ADMIN_USERNAME, TEST_USERS, authenticateUser, isAdmin, isTestUser } from "../utils/auth";
+import { authenticateUser, isAdmin, isTestUser, ADMIN_USERNAME } from "../utils/auth";
 
 /**
- * Login screen component
- * @param {Function} onLogin - Callback when user successfully logs in
+ * Login screen.
+ * Admin and test users bypass the API for easy local testing.
+ * Regular users authenticate via the real Reboot01 API.
  */
 export function LoginScreen({ onLogin }) {
   const [id, setId] = useState("");
@@ -13,28 +14,22 @@ export function LoginScreen({ onLogin }) {
 
   async function handleLogin() {
     const name = id.trim();
-    if (!name) {
-      setErr("Please enter your username or email.");
-      return;
-    }
+    if (!name) { setErr("Please enter your username or email."); return; }
 
-    // Admin login
+    // Admin bypass — no password needed for local testing
     if (isAdmin(name)) {
       onLogin(ADMIN_USERNAME, true);
       return;
     }
 
-    // Test user login
+    // Test user bypass — no password needed for local testing
     if (isTestUser(name)) {
       onLogin(name, false);
       return;
     }
 
-    // Regular user login
-    if (!pw) {
-      setErr("Please enter your password.");
-      return;
-    }
+    // Regular users must authenticate via the real API
+    if (!pw) { setErr("Please enter your password."); return; }
 
     setLoad(true);
     setErr("");
@@ -42,7 +37,7 @@ export function LoginScreen({ onLogin }) {
     const result = await authenticateUser(name, pw);
 
     if (result.success) {
-      onLogin(result.username, false);
+      onLogin(result.username, isAdmin(result.username));
     } else {
       setErr(result.error);
     }
@@ -86,4 +81,3 @@ export function LoginScreen({ onLogin }) {
     </div>
   );
 }
-
