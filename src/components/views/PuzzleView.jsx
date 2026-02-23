@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Header } from "../Header";
+import LabView from './LabView';
 
 // Single puzzle — same for all rounds
 const PUZZLE = {
@@ -8,7 +9,12 @@ const PUZZLE = {
   schema: `TABLE evidence (id, suspect, item, location, timestamp)`,
   accepted: [`select * from evidence`],
   resultRows: [
-    { id: 1, suspect: "Hajar", item: "lighter", location: "quest room", timestamp: "2026-02-14 23:41" },
+    { id: 1, suspect: "Hajar", item: "lighter", location: "Byte", timestamp: "2026-02-14 23:41" },
+    { id: 2, suspect: "Sara", item: "lighter", location: "Kashta", timestamp: "2026-02-14 22:58" },
+    { id: 3, suspect: "Marym", item: "lighter", location: "Stage", timestamp: "2026-02-14 23:05" },
+    { id: 4, suspect: "Mohammed", item: "lighter", location: "Stairs", timestamp: "2026-02-14 21:12" },
+    { id: 5, suspect: "Yousif", item: "lighter", location: "Smoke Area", timestamp: "2026-02-14 23:30" },
+    { id: 6, suspect: "Noah", item: "lighter", location: "Sandbox", timestamp: "2026-02-14 20:05" },
   ],
   clue: `Hajar has a lighter.`,
 };
@@ -194,7 +200,7 @@ export function PuzzleView({ gs, connected, onLogout }) {
                 borderRadius: 6, color: "#fbbf24",
                 fontWeight: 700, fontSize: "0.9rem", letterSpacing: 1,
               }}>
-                🔑 CLUE: {puzzle.clue}
+                {/* 🔑 CLUE: {puzzle.clue} */}
               </div>
             </div>
           )}
