@@ -9,6 +9,7 @@ import { DiscussView } from "./views/DiscussView";
 import { VoteView } from "./views/VoteView";
 import { ResultView } from "./views/ResultView";
 import { PuzzleView } from "./views/PuzzleView";
+import { SlidePuzzleView } from "./views/SlidePuzzleView";
 import LabView from "./views/LabView";
 import { GameOverView } from "./views/GameOverView";
 import { WalletView } from "./views/WalletView";
@@ -90,6 +91,12 @@ export function UserApp({ username, onLogout }) {
         {gs.phase === "lab" && (
           <div className="app">
             <LabView gs={gs} connected={connected} onLogout={onLogout} />
+          </div>
+        )}
+
+        {gs.phase === "slidepuzzle" && (
+          <div className="app">
+            <SlidePuzzleView gs={gs} connected={connected} onLogout={onLogout} />
           </div>
         )}
 

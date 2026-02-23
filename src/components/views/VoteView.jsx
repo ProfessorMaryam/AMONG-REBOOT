@@ -51,7 +51,7 @@ export function VoteView({
               className={`vote-card ${myVote === p.name ? "selected" : ""} ${isDisabled ? "disabled" : ""}`}
               onClick={() => !isDisabled && setMyVote(p.name)}
             >
-              <div className="av">{getAvatar(p.name)}</div>
+              <div className="av">{getAvatar(p.name) ? <img src={getAvatar(p.name)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "🧑‍💼"}</div>
               <div className="vname">{p.name}</div>
               {myVote === p.name && <div className="velim">SELECTED</div>}
             </div>

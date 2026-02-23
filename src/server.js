@@ -200,7 +200,7 @@ wss.on("connection", (ws) => {
         case "update": {
           if (!isAdminSocket) break;
           // Whitelist of allowed phase transitions only — no arbitrary patch
-          const allowedPhases = ["discuss", "wallet", "story", "puzzle"];
+          const allowedPhases = ["discuss", "wallet", "story", "puzzle", "lab", "slidepuzzle"];
           const targetPhase = msg.patch?.phase;
           if (targetPhase && !allowedPhases.includes(targetPhase)) break;
           if (targetPhase === "discuss") {

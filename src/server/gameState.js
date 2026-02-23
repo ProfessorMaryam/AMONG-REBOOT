@@ -58,7 +58,7 @@ export function checkGameOver(gameState) {
   if (impostorsLeft.length === 0) return "innocents";
 
   // Impostors win if they equal or outnumber the innocents
-  if (impostorsLeft.length >= innocentsLeft.length) return "impostors";
+  if (impostorsLeft.length > innocentsLeft.length) return "impostors";
 
   // Game continues if at least one impostor remains and innocents still outnumber them
   return null;

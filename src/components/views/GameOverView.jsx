@@ -40,7 +40,7 @@ export function GameOverView({ gs, onLogout }) {
           >
             {gs.impostors.map(name => (
               <div key={name} className="player-chip impostor-chip">
-                <div className="av">{getAvatar(name)}</div>
+                <div className="av">{getAvatar(name) ? <img src={getAvatar(name)} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "🧑‍💼"}</div>
                 <div>{name}</div>
               </div>
             ))}

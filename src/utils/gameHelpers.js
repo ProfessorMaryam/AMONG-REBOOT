@@ -1,6 +1,6 @@
 // Game constants and helper functions
 
-export const WS_URL = "ws://localhost:4000";
+export const WS_URL = `ws://${window.location.hostname}:4000`;
 
 export const DEFAULT_GAME_STATE = {
   lobby: [],
@@ -13,15 +13,21 @@ export const DEFAULT_GAME_STATE = {
   gameOver: null,
 };
 
-export const AVATARS = ["🧑‍🚀", "👩‍🚀", "🧑‍🔬", "👩‍🔬", "🧑‍💻", "👨‍🎤", "👩‍🎤", "🧛", "🧟", "🕵️"];
+export const AVATARS = {
+  Hajar:    new URL("../assets/Avatars/hajarAmong.png",       import.meta.url).href,
+  Sara:     new URL("../assets/Avatars/SaraAmongUs.png",      import.meta.url).href,
+  Maryam:   new URL("../assets/Avatars/Maryam amongUS.png",   import.meta.url).href,
+  Mohammad: new URL("../assets/Avatars/MohamedAmongus.jpeg",  import.meta.url).href,
+  Yousif:   new URL("../assets/Avatars/YousifAmongus.jpeg",   import.meta.url).href,
+};
 
 /**
- * Get avatar emoji for a player based on their name
+ * Get avatar image URL for a player based on their name
  * @param {string} name - Player name
- * @returns {string} Avatar emoji
+ * @returns {string|null} Avatar image URL or null if not found
  */
 export function getAvatar(name) {
-  return AVATARS[(name || "?").charCodeAt(0) % AVATARS.length];
+  return AVATARS[name] ?? null;
 }
 
 /**

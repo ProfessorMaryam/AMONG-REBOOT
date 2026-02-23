@@ -30,7 +30,7 @@ export function DiscussView({ gs, activeRoster, connected, onLogout }) {
         <div className="suspect-grid">
           {activeRoster.map(p => (
             <div key={p.name} className="player-chip">
-              <div className="av">{getAvatar(p.name)}</div>
+              <div className="av">{getAvatar(p.name) ? <img src={getAvatar(p.name)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "🧑‍💼"}</div>
               <div>{p.name}</div>
             </div>
           ))}

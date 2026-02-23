@@ -23,7 +23,7 @@ export function LobbyView({ gs, username, connected, onLogout }) {
         <div className="player-grid">
           {(gs.lobby || []).map(p => (
             <div key={p.name} className="player-chip">
-              <div className="av">{getAvatar(p.name)}</div>
+              <div className="av">{getAvatar(p.name) ? <img src={getAvatar(p.name)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "🧑‍💼"}</div>
               <div>{p.name}</div>
               {p.name === username && (
                 <div style={{ fontSize: "0.65rem", color: "var(--safe)", marginTop: 2 }}>

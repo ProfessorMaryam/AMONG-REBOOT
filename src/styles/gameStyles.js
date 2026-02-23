@@ -30,7 +30,7 @@ export const gameStyles = `
   .player-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:12px}
   .suspect-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
   .player-chip{background:#0d0d1a;border:1px solid var(--border);border-radius:8px;padding:12px 8px;text-align:center;font-size:0.85rem;font-weight:600;letter-spacing:1px}
-  .player-chip .av{font-size:1.5rem;margin-bottom:4px}
+  .player-chip .av{width:100%;aspect-ratio:1;overflow:hidden;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;border-radius:6px}
   .player-chip.elim{opacity:0.3;text-decoration:line-through}
   .player-chip.impostor-chip{border-color:var(--red);color:var(--red)}
   .badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;font-weight:700}
@@ -50,7 +50,7 @@ export const gameStyles = `
   .vote-card:hover:not(.disabled){border-color:var(--warn);transform:translateY(-2px)}
   .vote-card.selected{border-color:var(--red);box-shadow:0 0 16px var(--glow);background:rgba(230,57,70,0.08)}
   .vote-card.disabled{opacity:0.4;cursor:not-allowed;pointer-events:none}
-  .vote-card .av{font-size:2rem;margin-bottom:6px}
+  .vote-card .av{width:100%;aspect-ratio:1;overflow:hidden;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:2rem;border-radius:6px}
   .vote-card .vname{font-weight:700;font-size:0.95rem;letter-spacing:1px}
   .vote-card .velim{font-size:0.7rem;color:var(--muted);margin-top:4px;letter-spacing:1px}
   .result-box{text-align:center;padding:24px}

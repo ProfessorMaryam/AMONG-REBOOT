@@ -50,10 +50,10 @@ export function AdminDashboard({ onLogout }) {
               <button
                 className="btn yellow"
                 onClick={() =>
-                  send({ type: "update", patch: { phase: "discuss" } })
+                  send({ type: "update", patch: { phase: "puzzle" } })
                 }
               >
-                🗣️ Start Discussion
+                🧩 Start SQL Puzzle
               </button>
             )}
             {gs.phase === "discuss" && (
@@ -81,7 +81,27 @@ export function AdminDashboard({ onLogout }) {
                   send({ type: "update", patch: { phase: "discuss" } })
                 }
               >
-                👜 Skip Wallet — Go to Discussion
+                👜 Continue to Discussion
+              </button>
+            )}
+            {gs.phase === "lab" && (
+              <button
+                className="btn yellow"
+                onClick={() =>
+                  send({ type: "update", patch: { phase: "discuss" } })
+                }
+              >
+                🧬 Continue to Discussion
+              </button>
+            )}
+            {gs.phase === "slidepuzzle" && (
+              <button
+                className="btn yellow"
+                onClick={() =>
+                  send({ type: "update", patch: { phase: "discuss" } })
+                }
+              >
+                🧩 Continue to Discussion
               </button>
             )}
             {gs.phase === "vote" && (
@@ -133,7 +153,7 @@ export function AdminDashboard({ onLogout }) {
             <div className="player-grid">
               {gs.lobby.map((p) => (
                 <div key={p.name} className="player-chip">
-                  <div className="av">{getAvatar(p.name)}</div>
+                  <div className="av">{getAvatar(p.name) ? <img src={getAvatar(p.name)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "🧑‍💼"}</div>
                   <div>{p.name}</div>
                 </div>
               ))}
@@ -241,7 +261,7 @@ export function AdminDashboard({ onLogout }) {
                       key={p.name}
                       className={`player-chip ${isElim ? "elim" : ""}`}
                     >
-                      <div className="av">{getAvatar(p.name)}</div>
+                      <div className="av">{getAvatar(p.name) ? <img src={getAvatar(p.name)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "🧑‍💼"}</div>
                       <div>{p.name}</div>
                       {isElim && (
                         <div
@@ -266,7 +286,7 @@ export function AdminDashboard({ onLogout }) {
               .map(([name, count]) => (
                 <div key={name} className="bar-row">
                   <div className="bar-name">
-                    {getAvatar(name)} {name}
+                    {getAvatar(name) ? <img src={getAvatar(name)} alt={name} style={{ width: 24, height: 24, objectFit: "cover", verticalAlign: "middle", marginRight: 6 }} /> : "🧑‍💼 "}{name}
                   </div>
                   <div className="bar-track">
                     <div

@@ -1,12 +1,17 @@
 import { useState, useEffect, useRef } from "react";
+import hajarAvatar   from "../../assets/Avatars/hajarAmong.png";
+import saraAvatar    from "../../assets/Avatars/SaraAmongUs.png";
+import maryamAvatar  from "../../assets/Avatars/Maryam amongUS.png";
+import mohamedAvatar from "../../assets/Avatars/MohamedAmongus.jpeg";
+import yousifAvatar  from "../../assets/Avatars/YousifAmongus.jpeg";
 
 const ALL_SUSPECTS = [
-  { name: "Hajar",    blood: "O",  killer: true,  avatar: "🧑‍🚀", active: true  },
-  { name: "Sara",     blood: "O",  killer: false, avatar: "👸",   active: true  },
-  { name: "Marym",    blood: "O",  killer: false, avatar: "🧙‍♀️", active: true  },
-  { name: "Mohammed", blood: "AB", killer: false, avatar: "🥷",   active: true  },
-  { name: "Yousif",   blood: "O",  killer: true,  avatar: "🦸",   active: true  },
-  { name: "Noah",     blood: "B",  killer: false, avatar: "🧑‍💼", active: true  },
+  { name: "Hajar",    blood: "O",  killer: true,  avatar: hajarAvatar,   active: true  },
+  { name: "Sara",     blood: "O",  killer: false, avatar: saraAvatar,    active: true  },
+  { name: "Marym",    blood: "O",  killer: false, avatar: maryamAvatar,  active: true  },
+  { name: "Mohammed", blood: "AB", killer: false, avatar: mohamedAvatar, active: true  },
+  { name: "Yousif",   blood: "O",  killer: true,  avatar: yousifAvatar,  active: true  },
+  { name: "Noah",     blood: "B",  killer: false, avatar: null,          active: true  },
 ];
 
 const PHASES = { IDLE: "idle", COUNTING: "counting", COLORED: "colored", REVEALED: "revealed" };
@@ -355,7 +360,10 @@ export default function LabView() {
                 )}
 
                 {/* Avatar */}
-                <div style={{ fontSize: "1.9rem", lineHeight: 1 }}>{s.avatar}</div>
+                {s.avatar
+                  ? <img src={s.avatar} alt={s.name} style={{ width: 44, height: 44, borderRadius: 6, objectFit: "cover" }} />
+                  : <div style={{ width: 44, height: 44, borderRadius: 6, background: "#1e2535", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem" }}>🧑‍💼</div>
+                }
 
                 {/* Name */}
                 <div className="cell-name" style={{

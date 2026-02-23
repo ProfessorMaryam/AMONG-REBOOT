@@ -127,13 +127,13 @@ export function handleKick(gameState, msg, broadcast) {
     };
   } else {
     const nextRound = gameState.round + 1;
-    // Round mapping:
-    // - Round 2 => SQL puzzle
-    // - Round 3 => Wallet mini-game
-    // - Round 4 => Lab analysis
-    // - Other rounds default to puzzle
+    // Round mapping (phase shown before discussion each round):
+    // - Round 2 => Wallet mini-game
+    // - Round 3 => Lab (DNA analysis)
+    // - Round 4 => Slide puzzle
+    // - Other rounds => story
     const nextPhase =
-      nextRound === 2 ? "puzzle" : nextRound === 3 ? "wallet" : nextRound === 4 ? "lab" : "puzzle";
+      nextRound === 2 ? "wallet" : nextRound === 3 ? "lab" : nextRound === 4 ? "slidepuzzle" : "story";
     gameState = {
       ...gameState,
       phase: nextPhase,
