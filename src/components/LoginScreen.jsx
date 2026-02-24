@@ -1,43 +1,28 @@
 import { useState } from "react";
-import { authenticateUser, isAdmin, isTestUser, ADMIN_USERNAME } from "../utils/auth";
+import { authenticateUser } from "../utils/auth";
 
 /**
- * Login screen.
- * Admin and test users bypass the API for easy local testing.
- * Regular users authenticate via the real Reboot01 API.
+ * Login screen — authenticates via our own server, which validates against
+ * the Reboot01 API. The raw JWT never touches the browser.
  */
 export function LoginScreen({ onLogin }) {
-  const [id, setId] = useState("");
-  const [pw, setPw] = useState("");
-  const [err, setErr] = useState("");
+  const [id,      setId]   = useState("");
+  const [pw,      setPw]   = useState("");
+  const [err,     setErr]  = useState("");
   const [loading, setLoad] = useState(false);
 
   async function handleLogin() {
-    const name = id.trim();
-    if (!name) { setErr("Please enter your username or email."); return; }
-
-    // Admin bypass — no password needed for local testing
-    if (isAdmin(name)) {
-      onLogin(ADMIN_USERNAME, true);
-      return;
-    }
-
-    // Test user bypass — no password needed for local testing
-    if (isTestUser(name)) {
-      onLogin(name, false);
-      return;
-    }
-
-    // Regular users must authenticate via the real API
-    if (!pw) { setErr("Please enter your password."); return; }
+    const identifier = id.trim();
+    if (!identifier) { setErr("Please enter your username or email."); return; }
+    if (!pw)         { setErr("Please enter your password."); return; }
 
     setLoad(true);
     setErr("");
 
-    const result = await authenticateUser(name, pw);
+    const result = await authenticateUser(identifier, pw);
 
     if (result.success) {
-      onLogin(result.username, isAdmin(result.username));
+      onLogin(result.username);
     } else {
       setErr(result.error);
     }
@@ -48,28 +33,35 @@ export function LoginScreen({ onLogin }) {
   return (
     <div className="login-box">
       <div className="login-logo">AMONG US</div>
-      <div className="login-sub">Educational Edition</div>
+      <div className="login-sub">Reboot01 — Sign in with your account</div>
+
       <div className="field">
         <label>Username or Email</label>
         <input
           value={id}
           onChange={e => setId(e.target.value)}
-          placeholder="username or email"
+          placeholder="your Reboot01 username"
           disabled={loading}
+          onKeyDown={e => e.key === "Enter" && handleLogin()}
+          autoComplete="username"
         />
       </div>
+
       <div className="field">
         <label>Password</label>
         <input
           type="password"
           value={pw}
           onChange={e => setPw(e.target.value)}
-          placeholder="leave blank for test users"
+          placeholder="your Reboot01 password"
           disabled={loading}
           onKeyDown={e => e.key === "Enter" && handleLogin()}
+          autoComplete="current-password"
         />
       </div>
+
       {err && <div className="error">{err}</div>}
+
       <button
         className="btn"
         style={{ marginTop: 20 }}

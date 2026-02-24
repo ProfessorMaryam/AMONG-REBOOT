@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { WS_URL, DEFAULT_GAME_STATE } from "../utils/gameHelpers";
+import { getSessionToken } from "../utils/auth";
 
 export function useGameServer(username, isAdmin) {
   const [gs, setGs]           = useState({ ...DEFAULT_GAME_STATE });
@@ -12,12 +13,10 @@ export function useGameServer(username, isAdmin) {
 
   useEffect(() => {
     let reconnectTimer = null;
-    let destroyed = false; // set to true when this effect instance is cleaned up
+    let destroyed = false;
 
     function connect() {
       if (destroyed) return;
-
-      // Don't open a second socket if one is already alive
       if (wsRef.current && wsRef.current.readyState < 2) return;
 
       try {
@@ -28,7 +27,11 @@ export function useGameServer(username, isAdmin) {
           if (destroyed) { ws.close(); return; }
           setConn(true);
           if (nameRef.current) {
-            ws.send(JSON.stringify({ type: "join", username: nameRef.current }));
+            ws.send(JSON.stringify({
+              type: "join",
+              username: nameRef.current,
+              token: getSessionToken(),
+            }));
           }
         };
 
@@ -41,22 +44,22 @@ export function useGameServer(username, isAdmin) {
           if (msg.type === "chat") {
             setChatLog(prev => [...prev, msg]);
           }
+          if (msg.type === "error" && msg.error === "auth") {
+            // Server rejected the session — force logout
+            ws.close();
+          }
         };
 
         ws.onclose = () => {
           setConn(false);
           wsRef.current = null;
-          if (!destroyed) {
-            reconnectTimer = setTimeout(connect, 2000);
-          }
+          if (!destroyed) reconnectTimer = setTimeout(connect, 2000);
         };
 
         ws.onerror = () => ws.close();
       } catch (err) {
         console.error("WebSocket error:", err);
-        if (!destroyed) {
-          reconnectTimer = setTimeout(connect, 2000);
-        }
+        if (!destroyed) reconnectTimer = setTimeout(connect, 2000);
       }
     }
 
@@ -68,7 +71,11 @@ export function useGameServer(username, isAdmin) {
       const ws = wsRef.current;
       if (ws) {
         if (!isAdmin && nameRef.current && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "leave", username: nameRef.current }));
+          ws.send(JSON.stringify({
+            type: "leave",
+            username: nameRef.current,
+            token: getSessionToken(),
+          }));
         }
         ws.close();
         wsRef.current = null;
@@ -78,7 +85,8 @@ export function useGameServer(username, isAdmin) {
 
   function send(msg) {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(msg));
+      // Automatically attach session token to every outbound message
+      wsRef.current.send(JSON.stringify({ ...msg, token: getSessionToken() }));
     }
   }
 

@@ -4,7 +4,9 @@ import { Header } from "../Header";
  * Vote results view - reveals if eliminated player is innocent or impostor
  */
 export function ResultView({ gs, top, connected, onLogout }) {
-  const isImpostor = top && gs.impostors && gs.impostors.includes(top);
+  // Use server-resolved flag so players see the correct result
+  // (gs.impostors is stripped from player-facing state)
+  const isImpostor = gs.lastEliminatedWasImpostor === true;
 
   return (
     <div className="screen">

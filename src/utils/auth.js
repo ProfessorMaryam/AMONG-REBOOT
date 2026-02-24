@@ -1,144 +1,80 @@
 // Authentication utilities
-export const SIGNIN_URL = "https://learn.reboot01.com/api/auth/signin";
-export const GRAPHQL_URL =
-  "https://learn.reboot01.com/api/graphql-engine/v1/graphql";
+// All auth goes through our own server — the Reboot01 JWT never touches the browser.
+
 export const ADMIN_USERNAME = "haaljafen";
-// TEST_USERS still authenticate via the real API — no password bypass
-export const TEST_USERS = ["sbucheer", "mkhattar", "yalsari"];
+
+const API_BASE = `http://${window.location.hostname}:4000`;
 
 /**
- * Parse JWT token and extract payload
+ * Sign in via our server's /api/login endpoint.
+ * Returns { success, username, token } or { success: false, error }.
  */
-export function parseJWT(token) {
+export async function authenticateUser(identifier, password) {
   try {
-    const b = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    return JSON.parse(atob(b));
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Execute GraphQL query with JWT token
- */
-export async function gql(query, variables = {}) {
-  const token = sessionStorage.getItem("jwt");
-  if (!token) {
-    throw new Error("No authentication token found");
-  }
-
-  const res = await fetch(GRAPHQL_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`GraphQL request failed: ${res.status}`);
-  }
-
-  const data = await res.json();
-
-  if (data.errors) {
-    throw new Error(data.errors[0]?.message || "GraphQL query error");
-  }
-
-  return data.data;
-}
-
-/**
- * Fetch user data using GraphQL
- */
-export async function fetchUserData() {
-  const query = `{
-    user {
-      auditsAssigned
-      createdAt
-      email
-      firstName
-      id
-      lastName
-      login
-      totalUpBonus
-      updatedAt
-      attrs
-      events {
-        createdAt
-        eventId
-        id
-        level
-        userAuditRatio
-        userId
-        userLogin
-        userName
-      }
-    }
-  }`;
-
-  return await gql(query);
-}
-
-/**
- * Authenticate user with Reboot01 API.
- * Everyone — including admin and test users — goes through the real API.
- */
-export async function authenticateUser(username, password) {
-  try {
-    const res = await fetch(SIGNIN_URL, {
+    const res = await fetch(`${API_BASE}/api/login`, {
       method: "POST",
-      headers: { Authorization: `Basic ${btoa(`${username}:${password}`)}` },
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier, password }),
     });
 
+    const data = await res.json();
+
     if (!res.ok) {
-      return {
-        success: false,
-        error:
-          res.status === 401 || res.status === 403
-            ? "Invalid credentials."
-            : `Error ${res.status}.`,
-      };
+      return { success: false, error: data.error || `Error ${res.status}.` };
     }
 
-    let token = (await res.text()).replace(/^"|"$/g, "");
-    sessionStorage.setItem("jwt", token);
-
-    // Fetch user data via GraphQL to get the correct username
-    try {
-      const userData = await fetchUserData();
-      const graphqlUsername = userData?.user?.login;
-
-      if (graphqlUsername) {
-        console.log("Logged in as:", graphqlUsername);
-        return { success: true, username: graphqlUsername };
-      }
-    } catch (err) {
-      console.warn("Failed to fetch user data via GraphQL:", err);
-    }
-
-    // Fallback to JWT payload if GraphQL fails
-    const payload = parseJWT(token);
-    const extractedUsername =
-      payload?.login || payload?.name || payload?.sub || username;
-
-    return { success: true, username: extractedUsername };
+    // Store session token — not the raw JWT
+    sessionStorage.setItem("session-token", data.token);
+    return { success: true, username: data.username, token: data.token };
   } catch {
     return { success: false, error: "Network error — check your connection." };
   }
 }
 
 /**
- * Check if user is admin (server-side only — never trust the client)
+ * Restore session from stored token via /api/me.
+ * Returns { username } or null if token is missing/expired.
  */
-export function isAdmin(username) {
-  return username === ADMIN_USERNAME;
+export async function restoreSession() {
+  const token = sessionStorage.getItem("session-token");
+  if (!token) return null;
+  try {
+    const res = await fetch(`${API_BASE}/api/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) { sessionStorage.removeItem("session-token"); return null; }
+    return await res.json(); // { username }
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Check if user is a test user
+ * Sign out — invalidate session on the server and clear local storage.
  */
-export function isTestUser(username) {
-  return TEST_USERS.includes(username);
+export async function signOut() {
+  const token = sessionStorage.getItem("session-token");
+  sessionStorage.removeItem("session-token");
+  localStorage.removeItem("among-us:user");
+  if (!token) return;
+  try {
+    await fetch(`${API_BASE}/api/logout`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch { /* best-effort */ }
+}
+
+/**
+ * Get the stored session token.
+ */
+export function getSessionToken() {
+  return sessionStorage.getItem("session-token") || null;
+}
+
+/**
+ * Check if username is admin.
+ */
+export function isAdmin(username) {
+  return username === ADMIN_USERNAME;
 }

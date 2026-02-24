@@ -104,7 +104,14 @@ export function handleVote(gameState, msg, broadcast) {
  * Handle show result message
  */
 export function handleShowResult(gameState, broadcast) {
-  gameState = { ...gameState, phase: "result", phaseStartedAt: Date.now() };
+  // Tally votes to find the top target and record whether they're an impostor
+  const counts = {};
+  Object.values(gameState.votes).forEach(v => { counts[v] = (counts[v] || 0) + 1; });
+  let top = null, max = 0;
+  Object.entries(counts).forEach(([p, c]) => { if (c > max) { max = c; top = p; } });
+  const lastEliminatedWasImpostor = top ? gameState.impostors.includes(top) : null;
+
+  gameState = { ...gameState, phase: "result", phaseStartedAt: Date.now(), lastEliminatedWasImpostor };
   broadcast(gameState);
   return gameState;
 }

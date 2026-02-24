@@ -19,17 +19,17 @@ export const STORY_PAGES = [
   {
     title: "SARA",
     icon: "🎓",
-    text: `Yaman yelled at her for failing after doing five student audits and no mentor auditm and would not help her with the fail.\n\nShe was not happy..`,
+    text: `Yaman failed her after she completed five student audits with no mentor audit in return. When she asked for help, he refused.\n\nShe was furious — and made no effort to hide it.`,
   },
   {
     title: "HAJAR",
     icon: "🚪",
-    text: `Yaman kicked her out of a checkpoint — no warning, no second chance.\n`,
+    text: `Yaman removed her from a checkpoint without warning and without a second chance.\n\nShe never got an explanation. She never stopped asking for one.`,
   },
   {
     title: "MARYAM",
     icon: "⏳",
-    text: `She needed a mentor audit. He kept delaying it — week after week, excuse after excuse.\n\n She did not like the delays`,
+    text: `She needed a mentor audit. He kept delaying it — week after week, excuse after excuse.\n\nPatience has a limit. Hers ran out.`,
   },
   {
     title: "YOUSIF",
@@ -39,7 +39,7 @@ export const STORY_PAGES = [
   {
     title: "MOHAMED",
     icon: "🏫",
-    text: `He barely showed up to Reboot. Yaman noticed. Yaman made it known.\n\n He felt Embarrassed`,
+    text: `He barely showed up to Reboot. Yaman noticed — and made sure everyone else did too.\n\nThe public embarrassment left a mark.`,
   },
   {
     title: "NOOH",

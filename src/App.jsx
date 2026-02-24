@@ -1,38 +1,45 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LoginScreen } from "./components/LoginScreen";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { UserApp } from "./components/UserApp";
 import { gameStyles } from "./styles/gameStyles";
-import { isAdmin } from "./utils/auth";
+import { isAdmin, restoreSession, signOut } from "./utils/auth";
 
 /**
- * Root App component
- * Manages user authentication and routes to appropriate view.
- * isAdmin is always derived from the username — never trusted from storage.
+ * Root App component.
+ * On mount, tries to restore an existing session via /api/me.
+ * isAdmin is always derived server-side from the username — never from storage.
  */
 export default function App() {
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem("among-us:user"));
-      if (!stored?.username) return null;
-      // Re-derive isAdmin from username — ignore any stored isAdmin value
-      return { username: stored.username, isAdmin: isAdmin(stored.username) };
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser]       = useState(null);
+  const [checking, setCheck]  = useState(true); // true while restoring session
 
-  function handleLogin(username, adminFlag) {
-    // adminFlag comes from isAdmin(username) in LoginScreen — re-verify here too
-    const u = { username, isAdmin: isAdmin(username) && adminFlag };
-    localStorage.setItem("among-us:user", JSON.stringify({ username: u.username }));
-    setUser(u);
+  // On mount: try to restore session from stored token
+  useEffect(() => {
+    restoreSession().then(data => {
+      if (data?.username) {
+        setUser({ username: data.username, isAdmin: isAdmin(data.username) });
+      }
+      setCheck(false);
+    });
+  }, []);
+
+  function handleLogin(username) {
+    setUser({ username, isAdmin: isAdmin(username) });
   }
 
-  function handleLogout() {
-    localStorage.removeItem("among-us:user");
-    sessionStorage.removeItem("jwt");
+  async function handleLogout() {
+    await signOut();
     setUser(null);
+  }
+
+  // Show nothing while the session check is in flight (avoids login flash)
+  if (checking) {
+    return (
+      <div className="app">
+        <style>{gameStyles}</style>
+      </div>
+    );
   }
 
   if (!user) {
