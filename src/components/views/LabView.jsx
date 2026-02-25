@@ -4,19 +4,23 @@ import saraAvatar    from "../../assets/Avatars/SaraAmongUs.png";
 import maryamAvatar  from "../../assets/Avatars/Maryam amongUS.png";
 import mohamedAvatar from "../../assets/Avatars/MohamedAmongus.jpeg";
 import yousifAvatar  from "../../assets/Avatars/YousifAmongus.jpeg";
+import noohAvatar from "../../assets/Avatars/noohAmongus.png"
 
+// Names must match gameState.js RTC_ROSTER exactly
 const ALL_SUSPECTS = [
-  { name: "Hajar",    blood: "O",  killer: true,  avatar: hajarAvatar,   active: true  },
-  { name: "Sara",     blood: "O",  killer: false, avatar: saraAvatar,    active: true  },
-  { name: "Marym",    blood: "O",  killer: false, avatar: maryamAvatar,  active: true  },
-  { name: "Mohammed", blood: "AB", killer: false, avatar: mohamedAvatar, active: true  },
-  { name: "Yousif",   blood: "O",  killer: true,  avatar: yousifAvatar,  active: true  },
-  { name: "Noah",     blood: "B",  killer: false, avatar: null,          active: true  },
+  { name: "Hajar",    blood: "O",  killer: true,  avatar: hajarAvatar   },
+  { name: "Sara",     blood: "O",  killer: false, avatar: saraAvatar    },
+  { name: "Maryam",   blood: "O",  killer: false, avatar: maryamAvatar  },
+  { name: "Mohammad", blood: "AB", killer: false, avatar: mohamedAvatar },
+  { name: "Yousif",   blood: "O",  killer: true,  avatar: yousifAvatar  },
+  { name: "Nooh",     blood: "B",  killer: false, avatar: noohAvatar    },
 ];
 
 const PHASES = { IDLE: "idle", COUNTING: "counting", COLORED: "colored", REVEALED: "revealed" };
 
-export default function LabView() {
+export default function LabView({ gs }) {
+  // Derive active state from server-authoritative eliminated list
+  const eliminated = gs?.eliminated ?? [];
   const [phase, setPhase] = useState(PHASES.IDLE);
   const [countdown, setCountdown] = useState(10);
   const [tubeColors, setTubeColors] = useState(ALL_SUSPECTS.map(() => "neutral"));
@@ -31,14 +35,14 @@ export default function LabView() {
       setFlash(true);
       setTimeout(() => setFlash(false), 700);
       setTimeout(() => {
-        setTubeColors(ALL_SUSPECTS.map(s => !s.active ? "kicked" : s.killer ? "red" : "blue"));
+        setTubeColors(ALL_SUSPECTS.map(s => eliminated.includes(s.name) ? "kicked" : s.killer ? "red" : "blue"));
         setPhase(PHASES.COLORED);
       }, 700);
       return;
     }
     timerRef.current = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(timerRef.current);
-  }, [phase, countdown]);
+  }, [phase, countdown, eliminated]);
 
   useEffect(() => {
     if (phase !== PHASES.COLORED) return;
@@ -344,7 +348,7 @@ export default function LabView() {
             const col    = tubeColors[i];
             const isRed  = col === "red";
             const isBlue = col === "blue";
-            const kicked = !s.active;
+            const kicked = eliminated.includes(s.name);
 
             return (
               <div key={i} className={`tube-cell ${kicked ? "kicked" : isRed ? "red" : isBlue ? "blue" : ""}`}>

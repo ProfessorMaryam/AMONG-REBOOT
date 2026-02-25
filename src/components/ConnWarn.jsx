@@ -20,7 +20,7 @@ export function ConnWarn({ connected }) {
     }}>
       ⚠ Reconnecting to server… make sure{" "}
       <code style={{ background: "rgba(0,0,0,0.3)", padding: "2px 6px", borderRadius: 4 }}>
-        node src/server.js
+        npm run server
       </code>{" "}
       is running
     </div>

@@ -1,10 +1,13 @@
 // Among Us Game Server
-// Run with: node src/server.js (or npm run server)
+// Run with: node server/index.js (or npm run server)
 
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
-import { freshState } from "./server/gameState.js";
+import { freshState } from "./gameState.js";
 import {
   handleJoin,
   handleLeave,
@@ -14,12 +17,37 @@ import {
   handleShowResult,
   handleKick,
   handleReset,
-} from "./server/messageHandlers.js";
+} from "./messageHandlers.js";
 
-const PORT = 4000;
-const ADMIN_USERNAME = "sbucheer";
-const REBOOT_SIGNIN = "https://learn.reboot01.com/api/auth/signin";
-const REBOOT_GQL = "https://learn.reboot01.com/api/graphql-engine/v1/graphql";
+// ── Load .env manually (no extra dependency needed) ───────────────────────────
+const __dirname = dirname(fileURLToPath(import.meta.url));
+try {
+  const envPath = resolve(__dirname, "../.env");
+  const lines = readFileSync(envPath, "utf8").split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const val = trimmed.slice(eq + 1).trim().replace(/^"|"$/g, "");
+    if (!(key in process.env)) process.env[key] = val;
+  }
+} catch {
+  // .env not found — rely on environment variables already set (fine in production)
+}
+
+const PORT = Number(process.env.PORT) || 3001;
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "sbucheer";
+const REBOOT_SIGNIN = process.env.REBOOT_SIGNIN || "https://learn.reboot01.com/api/auth/signin";
+const REBOOT_GQL = process.env.REBOOT_GQL || "https://learn.reboot01.com/api/graphql-engine/v1/graphql";
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
+
+// ── Test accounts (dev only) ───────────────────────────────────────────────────
+// Format: username → password (plain text, local only — never hits Reboot01)
+const TEST_ACCOUNTS = process.env.NODE_ENV !== "production"
+  ? { testuser: "test123" }
+  : {};
 
 // ── Session store ─────────────────────────────────────────────────────────────
 // token (random hex) → { username, jwt, expiresAt }
@@ -122,14 +150,14 @@ async function fetchLogin(jwt) {
 }
 
 // ── HTTP server (auth endpoints) ──────────────────────────────────────────────
-function cors(res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+function setCorsHeaders(res) {
+  res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 }
 
 function json(res, status, body) {
-  cors(res);
+  setCorsHeaders(res);
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(body));
 }
@@ -172,7 +200,7 @@ const httpServer = createServer(async (req, res) => {
 
   // CORS preflight
   if (req.method === "OPTIONS") {
-    cors(res);
+    setCorsHeaders(res);
     res.writeHead(204);
     res.end();
     return;
@@ -182,9 +210,7 @@ const httpServer = createServer(async (req, res) => {
   if (req.method === "POST" && url.pathname === "/api/login") {
     const ip = getIp(req);
     if (isRateLimited(ip)) {
-      return json(res, 429, {
-        error: "Too many attempts. Try again in a minute.",
-      });
+      return json(res, 429, { error: "Too many attempts. Try again in a minute." });
     }
     let body;
     try {
@@ -199,6 +225,15 @@ const httpServer = createServer(async (req, res) => {
     const password = String(body.password || "").slice(0, 256);
     if (!identifier || !password) {
       return json(res, 400, { error: "Username and password are required." });
+    }
+
+    // Test account shortcut — bypasses Reboot01 auth
+    if (TEST_ACCOUNTS[identifier] !== undefined) {
+      if (TEST_ACCOUNTS[identifier] !== password) {
+        return json(res, 401, { error: "Invalid credentials." });
+      }
+      const token = createSession(identifier, null);
+      return json(res, 200, { token, username: identifier });
     }
 
     try {
@@ -223,7 +258,10 @@ const httpServer = createServer(async (req, res) => {
     const token = getBearerToken(req);
     const session = getSession(token);
     if (!session) return json(res, 401, { error: "Not authenticated." });
-    return json(res, 200, { username: session.username });
+    return json(res, 200, {
+      username: session.username,
+      isAdmin: session.username === ADMIN_USERNAME,
+    });
   }
 
   res.writeHead(404);
@@ -335,13 +373,15 @@ wss.on("connection", (ws) => {
 
           const username = session.username;
 
-          if (username === ADMIN_USERNAME) adminSockets.add(ws);
+          const isAdminUser = username === ADMIN_USERNAME;
+          if (isAdminUser) adminSockets.add(ws);
 
           gameState = handleJoin(
             gameState,
             { ...msg, username },
             ws,
             broadcast,
+            isAdminUser,
           );
           ws.send(
             JSON.stringify({
@@ -466,5 +506,7 @@ wss.on("connection", (ws) => {
 });
 
 httpServer.listen(PORT, () => {
-  console.log(`\n🎮 Among Us Game Server → http/ws://0.0.0.0:${PORT}\n`);
+  console.log(`\n🎮 Among Us Game Server → http/ws://0.0.0.0:${PORT}`);
+  console.log(`   Admin: ${ADMIN_USERNAME}`);
+  console.log(`   Mode:  ${process.env.NODE_ENV || "development"}\n`);
 });

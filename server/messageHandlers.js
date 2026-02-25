@@ -4,13 +4,11 @@ import { assignImpostors, checkGameOver } from "./gameState.js";
 /**
  * Handle join message
  */
-const ADMIN_USERNAME = "haaljafen";
-
-export function handleJoin(gameState, msg, ws, broadcast) {
+export function handleJoin(gameState, msg, ws, broadcast, isAdminUser = false) {
   const { username } = msg;
   console.log(`✅ ${username} attempting to join`);
   // Admin connects for control only — never appears in the player lobby
-  if (username === ADMIN_USERNAME) {
+  if (isAdminUser) {
     ws.send(JSON.stringify({ type: "state", state: gameState }));
     return gameState;
   }

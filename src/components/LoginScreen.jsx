@@ -22,7 +22,7 @@ export function LoginScreen({ onLogin }) {
     const result = await authenticateUser(identifier, pw);
 
     if (result.success) {
-      onLogin(result.username);
+      onLogin(result.username, result.isAdmin);
     } else {
       setErr(result.error);
     }

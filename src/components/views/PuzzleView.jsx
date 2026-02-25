@@ -5,18 +5,18 @@ import LabView from './LabView';
 // Single puzzle — same for all rounds
 const PUZZLE = {
   riddle: `The evidence table is locked. Retrieve ALL records from it to uncover what was found at the crime scene.`,
-  hint: `SELECT * FROM evidence;`,
+  hint: ``,
   schema: `TABLE evidence (id, suspect, item, location, timestamp)`,
   accepted: [`select * from evidence`],
   resultRows: [
-    { id: 1, suspect: "Hajar", item: "lighter", location: "Byte", timestamp: "2026-02-14 23:41" },
-    { id: 2, suspect: "Sara", item: "lighter", location: "Kashta", timestamp: "2026-02-14 22:58" },
-    { id: 3, suspect: "Marym", item: "lighter", location: "Stage", timestamp: "2026-02-14 23:05" },
-    { id: 4, suspect: "Mohammed", item: "lighter", location: "Stairs", timestamp: "2026-02-14 21:12" },
-    { id: 5, suspect: "Yousif", item: "lighter", location: "Smoke Area", timestamp: "2026-02-14 23:30" },
-    { id: 6, suspect: "Noah", item: "lighter", location: "Sandbox", timestamp: "2026-02-14 20:05" },
+    { id: 1, suspect: "Sara",    item: "ID, coal receipt",   location: "Pixel – Meeting Room exit", timestamp: "20:15" },
+    { id: 2, suspect: "Maryam",  item: "ID, gum",            location: "Other side – with Melvis",  timestamp: "20:00" },
+    { id: 3, suspect: "Hajar",   item: "ID, USB",            location: "Pixel – desk area",         timestamp: "19:00–21:00" },
+    { id: 4, suspect: "Yousif",  item: "ID, subway receipt", location: "Gaming Tube",    timestamp: "19:35" },
+    { id: 5, suspect: "Nooh",    item: "Movie ticket",       location: "Cruncher ",         timestamp: "20:30" },
+    { id: 6, suspect: "Mohamed", item: "ID, Swedish candy",  location: "Upstairs",                  timestamp: "until 21:00" },
   ],
-  clue: `Hajar has a lighter.`,
+  clue: `Check the timestamps carefully — someone's alibi doesn't add up.`,
 };
 
 /**

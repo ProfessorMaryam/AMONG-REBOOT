@@ -5,6 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>among-reboot</title>
+    <script>
+      // crypto.randomUUID is only available in secure contexts (HTTPS).
+      // On plain HTTP (LAN dev), patch it with a simple UUID v4 fallback.
+      if (typeof crypto === 'undefined' || typeof crypto.randomUUID !== 'function') {
+        const c = typeof crypto !== 'undefined' ? crypto : {};
+        c.randomUUID = function() {
+          return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, function(c) {
+            return (c ^ (Math.random() * 16 >> c / 4)).toString(16);
+          });
+        };
+        if (typeof crypto === 'undefined') { window.crypto = c; }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

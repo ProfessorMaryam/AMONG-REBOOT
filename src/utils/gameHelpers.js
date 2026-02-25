@@ -1,6 +1,8 @@
 // Game constants and helper functions
 
-export const WS_URL = `ws://${window.location.hostname}:4000`;
+// WS connects back to the same host/port the page was served from.
+// In dev, Vite proxies /ws → the backend. In production, a reverse proxy does the same.
+export const WS_URL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`;
 
 export const DEFAULT_GAME_STATE = {
   lobby: [],
@@ -19,6 +21,7 @@ export const AVATARS = {
   Maryam:   new URL("../assets/Avatars/Maryam amongUS.png",   import.meta.url).href,
   Mohammad: new URL("../assets/Avatars/MohamedAmongus.jpeg",  import.meta.url).href,
   Yousif:   new URL("../assets/Avatars/YousifAmongus.jpeg",   import.meta.url).href,
+  Nooh:     new URL("../assets/Avatars/noohAmongus.png",      import.meta.url).href,
 };
 
 /**

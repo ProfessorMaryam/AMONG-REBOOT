@@ -3,7 +3,7 @@ import { LoginScreen } from "./components/LoginScreen";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { UserApp } from "./components/UserApp";
 import { gameStyles } from "./styles/gameStyles";
-import { isAdmin, restoreSession, signOut } from "./utils/auth";
+import { restoreSession, signOut } from "./utils/auth";
 
 /**
  * Root App component.
@@ -18,14 +18,14 @@ export default function App() {
   useEffect(() => {
     restoreSession().then(data => {
       if (data?.username) {
-        setUser({ username: data.username, isAdmin: isAdmin(data.username) });
+        setUser({ username: data.username, isAdmin: data.isAdmin === true });
       }
       setCheck(false);
     });
   }, []);
 
-  function handleLogin(username) {
-    setUser({ username, isAdmin: isAdmin(username) });
+  function handleLogin(username, isAdminUser) {
+    setUser({ username, isAdmin: isAdminUser === true });
   }
 
   async function handleLogout() {
@@ -55,7 +55,7 @@ export default function App() {
     return (
       <div className="app">
         <style>{gameStyles}</style>
-        <AdminDashboard onLogout={handleLogout} />
+        <AdminDashboard username={user.username} onLogout={handleLogout} />
       </div>
     );
   }

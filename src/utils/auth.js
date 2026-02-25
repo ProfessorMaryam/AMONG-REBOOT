@@ -1,39 +1,46 @@
 // Authentication utilities
 // All auth goes through our own server — the Reboot01 JWT never touches the browser.
+// The server is always the source of truth for admin status.
 
-export const ADMIN_USERNAME = "haaljafen";
-
-const API_BASE = `http://${window.location.hostname}:4000`;
+// In dev, Vite proxies /api → http://localhost:3001.
+// In production, a reverse proxy forwards /api to the backend.
+const API_BASE = "";
 
 /**
  * Sign in via our server's /api/login endpoint.
- * Returns { success, username, token } or { success: false, error }.
+ * Returns { success, username, isAdmin, token } or { success: false, error }.
  */
 export async function authenticateUser(identifier, password) {
+  let res;
   try {
-    const res = await fetch(`${API_BASE}/api/login`, {
+    res = await fetch(`${API_BASE}/api/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ identifier, password }),
     });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      return { success: false, error: data.error || `Error ${res.status}.` };
-    }
-
-    // Store session token — not the raw JWT
-    sessionStorage.setItem("session-token", data.token);
-    return { success: true, username: data.username, token: data.token };
   } catch {
-    return { success: false, error: "Network error — check your connection." };
+    return { success: false, error: "Cannot reach server — check your connection." };
   }
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    return { success: false, error: `Server error ${res.status}.` };
+  }
+
+  if (!res.ok) {
+    return { success: false, error: data.error || `Error ${res.status}.` };
+  }
+
+  // Store session token — not the raw JWT
+  sessionStorage.setItem("session-token", data.token);
+  return { success: true, username: data.username, isAdmin: data.isAdmin, token: data.token };
 }
 
 /**
  * Restore session from stored token via /api/me.
- * Returns { username } or null if token is missing/expired.
+ * Returns { username, isAdmin } or null if token is missing/expired.
  */
 export async function restoreSession() {
   const token = sessionStorage.getItem("session-token");
@@ -43,7 +50,7 @@ export async function restoreSession() {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) { sessionStorage.removeItem("session-token"); return null; }
-    return await res.json(); // { username }
+    return await res.json(); // { username, isAdmin }
   } catch {
     return null;
   }
@@ -70,11 +77,4 @@ export async function signOut() {
  */
 export function getSessionToken() {
   return sessionStorage.getItem("session-token") || null;
-}
-
-/**
- * Check if username is admin.
- */
-export function isAdmin(username) {
-  return username === ADMIN_USERNAME;
 }
