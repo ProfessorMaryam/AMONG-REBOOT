@@ -11,15 +11,16 @@ export const RTC_ROSTER = [
 
 /**
  * Create a fresh game state
+ * @param {Array<string>} impostors - Impostor names, configured externally via env
  * @returns {Object} Initial game state
  */
-export function freshState() {
+export function freshState(impostors) {
   return {
     // logged-in players (viewers/voters)
     lobby: [],
     // the fixed RTC roster for voting
     roster: RTC_ROSTER.map((p) => ({ ...p })),
-    impostors: ["Hajar", "Yousif"],
+    impostors,
     phase: "lobby", // lobby | story | discuss | wallet | puzzle | vote | result | gameover
     round: 0,
     eliminated: [],
@@ -30,12 +31,12 @@ export function freshState() {
 }
 
 /**
- * Assign random impostors from active roster
+ * Return the configured impostors already embedded in the game state
  * @param {Object} gameState - Current game state
  * @returns {Array<string>} Array of impostor names
  */
-export function assignImpostors(_gameState) {
-  return ["Hajar", "Yousif"];
+export function assignImpostors(gameState) {
+  return gameState.impostors;
 }
 
 /**

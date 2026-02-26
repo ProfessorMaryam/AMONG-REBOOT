@@ -18,7 +18,7 @@ import { WalletView } from "./views/WalletView";
  * User application - handles all player views
  */
 export function UserApp({ username, onLogout }) {
-  const { gs, connected, send, chatLog } = useGameServer(username, false);
+  const { gs, connected, send, chatLog, voteNonce } = useGameServer(username, false);
   const [myVote, setMyVote] = useState(null);
   const [voted, setVoted] = useState(false);
   const [storyPage, setStoryPage] = useState(0);
@@ -40,9 +40,9 @@ export function UserApp({ username, onLogout }) {
   const handleVoteDone = useCallback(() => setVoteLocked(true), []);
 
   function submitVote() {
-    if (!myVote || voted || voteLocked) return;
+    if (!myVote || voted || voteLocked || !voteNonce) return;
     setVoted(true);
-    send({ type: "vote", voter: username, target: myVote });
+    send({ type: "vote", target: myVote, nonce: voteNonce });
   }
 
   const activeRoster = gs.roster ? gs.roster.filter(p => !gs.eliminated.includes(p.name)) : [];

@@ -3,9 +3,10 @@ import { WS_URL, DEFAULT_GAME_STATE } from "../utils/gameHelpers";
 import { getSessionToken } from "../utils/auth";
 
 export function useGameServer(username, isAdmin) {
-  const [gs, setGs]           = useState({ ...DEFAULT_GAME_STATE });
-  const [connected, setConn]  = useState(false);
-  const [chatLog, setChatLog] = useState([]);
+  const [gs, setGs]               = useState({ ...DEFAULT_GAME_STATE });
+  const [connected, setConn]      = useState(false);
+  const [chatLog, setChatLog]     = useState([]);
+  const [voteNonce, setVoteNonce] = useState(null);
   const wsRef   = useRef(null);
   const nameRef = useRef(username);
 
@@ -39,7 +40,11 @@ export function useGameServer(username, isAdmin) {
           const msg = JSON.parse(e.data);
           if (msg.type === "state") {
             setGs({ ...msg.state });
+            if (msg.state.phase !== "vote") setVoteNonce(null);
             if (msg.state.phase === "lobby") setChatLog([]);
+          }
+          if (msg.type === "voteNonce") {
+            setVoteNonce(msg.nonce);
           }
           if (msg.type === "chat") {
             setChatLog(prev => [...prev, msg]);
@@ -90,5 +95,5 @@ export function useGameServer(username, isAdmin) {
     }
   }
 
-  return { gs, connected, send, chatLog };
+  return { gs, connected, send, chatLog, voteNonce };
 }

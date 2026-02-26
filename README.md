@@ -1,16 +1,75 @@
-# React + Vite
+# Among Reboot
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An Among Us-inspired real-time multiplayer game built for the Reboot01 community. Players log in with their Reboot01 credentials and participate in a social deduction game with impostors, voting rounds, and mini-games.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Frontend:** React 19 + Vite
+- **Backend:** Node.js HTTP server + WebSocket (`ws`)
+- **Auth:** Reboot01 JWT via Basic Auth, server-side sessions
 
-## React Compiler
+## Getting Started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Prerequisites
 
-## Expanding the ESLint configuration
+- Node.js 18+
+- A Reboot01 account (or use the dev test account)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Install
+
+```bash
+npm install
+```
+
+### Environment Variables
+
+Create a `.env` file in the project root (optional — defaults are provided for dev):
+
+```env
+PORT=3001
+ADMIN_USERNAME=sbucheer
+REBOOT_SIGNIN=https://learn.reboot01.com/api/auth/signin
+REBOOT_GQL=https://learn.reboot01.com/api/graphql-engine/v1/graphql
+ALLOWED_ORIGIN=*
+```
+
+### Run (development)
+
+```bash
+npm run dev
+```
+
+This starts both the WebSocket/HTTP server (port 3001) and the Vite dev server concurrently.
+
+### Run (production)
+
+```bash
+npm run build
+NODE_ENV=production npm run server:prod
+```
+
+## Game Flow
+
+| Phase | Description |
+|-------|-------------|
+| `lobby` | Players join and wait for the admin to start |
+| `story` | Story intro is shown |
+| `wallet` | Mini-game: Wallet task (80s) |
+| `puzzle` | Mini-game: Puzzle task |
+| `lab` | Mini-game: Lab task |
+| `slidepuzzle` | Mini-game: Slide puzzle |
+| `discuss` | Discussion phase (60s) |
+| `vote` | Voting phase — players vote to eliminate a suspect (30s) |
+| `result` | Vote result revealed |
+| `gameover` | Game ends |
+
+## Admin
+
+Log in with the configured `ADMIN_USERNAME` to access the Admin Dashboard, which lets you control game phases, kick players, start votes, and reveal results.
+
+## Dev Test Account
+
+In development (`NODE_ENV` ≠ `production`), you can log in with:
+
+- **Username:** `testuser`
+- **Password:** `test123`

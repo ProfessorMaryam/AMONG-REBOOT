@@ -10,13 +10,13 @@ const API_BASE = "";
  * Sign in via our server's /api/login endpoint.
  * Returns { success, username, isAdmin, token } or { success: false, error }.
  */
-export async function authenticateUser(identifier, password) {
+export async function authenticateUser(identifier, password, adminSecret = "") {
   let res;
   try {
     res = await fetch(`${API_BASE}/api/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ identifier, password }),
+      body: JSON.stringify({ identifier, password, adminSecret }),
     });
   } catch {
     return { success: false, error: "Cannot reach server — check your connection." };
@@ -50,7 +50,10 @@ export async function restoreSession() {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) { sessionStorage.removeItem("session-token"); return null; }
-    return await res.json(); // { username, isAdmin }
+    const data = await res.json(); // { username, isAdmin, token }
+    // Server rotates the token on every /api/me call — store the new one
+    if (data.token) sessionStorage.setItem("session-token", data.token);
+    return data;
   } catch {
     return null;
   }

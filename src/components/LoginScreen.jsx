@@ -8,6 +8,7 @@ import { authenticateUser } from "../utils/auth";
 export function LoginScreen({ onLogin }) {
   const [id,      setId]   = useState("");
   const [pw,      setPw]   = useState("");
+  const [pin,     setPin]  = useState("");
   const [err,     setErr]  = useState("");
   const [loading, setLoad] = useState(false);
 
@@ -19,7 +20,7 @@ export function LoginScreen({ onLogin }) {
     setLoad(true);
     setErr("");
 
-    const result = await authenticateUser(identifier, pw);
+    const result = await authenticateUser(identifier, pw, pin);
 
     if (result.success) {
       onLogin(result.username, result.isAdmin);
@@ -57,6 +58,19 @@ export function LoginScreen({ onLogin }) {
           disabled={loading}
           onKeyDown={e => e.key === "Enter" && handleLogin()}
           autoComplete="current-password"
+        />
+      </div>
+
+      <div className="field">
+        <label>Admin PIN <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: "0.8em" }}>(leave blank if not admin)</span></label>
+        <input
+          type="password"
+          value={pin}
+          onChange={e => setPin(e.target.value)}
+          placeholder="admin secret PIN"
+          disabled={loading}
+          onKeyDown={e => e.key === "Enter" && handleLogin()}
+          autoComplete="off"
         />
       </div>
 
